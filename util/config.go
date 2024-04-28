@@ -5,9 +5,9 @@ import (
 )
 
 type Config struct {
-	BASE_URL      string `mapstructure:"BASE_URL"`
-	CLIENT_ID     string `mapstructure:"CLIENT_ID"`
-	CLIENT_SECRET string `mapstructure:"CLIENT_SECRET"`
+	BaseUrl      string `mapstructure:"BASE_URL"`
+	ClientId     string `mapstructure:"CLIENT_ID"`
+	ClientSecret string `mapstructure:"CLIENT_SECRET"`
 }
 
 func LoadConfig(path string) (config Config, err error) {

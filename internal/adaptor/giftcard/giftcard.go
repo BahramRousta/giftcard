@@ -21,9 +21,9 @@ func NewGiftCard() *GiftCard {
 	}
 
 	return &GiftCard{
-		BaseUrl:      config.BASE_URL,
-		ClientID:     config.CLIENT_ID,
-		ClientSecret: config.CLIENT_SECRET,
+		BaseUrl:      config.BaseUrl,
+		ClientID:     config.ClientId,
+		ClientSecret: config.ClientSecret,
 	}
 }
 
