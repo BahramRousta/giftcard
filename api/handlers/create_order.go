@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"errors"
 	adaptor "giftCard/internal/adaptor/giftcard"
+	"giftCard/internal/usecase"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -48,16 +50,20 @@ func CreateOrder(c echo.Context) error {
 		productList = append(productList, productMap)
 	}
 
-	gf := adaptor.NewGiftCard()
-	data, err := gf.CreateOrder(productList)
+	data, err := usecase.CreateOrderUseCase(productList)
+
 	if err != nil {
-		if orderErr, ok := err.(*adaptor.OrderError); ok {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error":   orderErr.ErrorMsg,
-				"payload": orderErr.Response,
-			})
+		if err != nil {
+			var orderErr *adaptor.CreateOrderError
+			if errors.As(err, &orderErr) {
+				return c.JSON(http.StatusBadRequest, map[string]interface{}{
+					"message": orderErr.Response["message"],
+					"success": false,
+					"data":    map[string]any{},
+				})
+			}
+			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
-	return c.JSON(http.StatusCreated, data)
+	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
 }

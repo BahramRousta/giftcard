@@ -3,7 +3,6 @@ package adaptor
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -54,19 +53,19 @@ func (g *GiftCard) CreateOrder(productList []map[string]any) (map[string]any, er
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(responseData)
 
 	if res.StatusCode == http.StatusOK {
 		return responseData, nil
+	} else {
+		return nil, &CreateOrderError{ErrorMsg: "failed to create order", Response: responseData}
 	}
-	return nil, &OrderError{ErrorMsg: "failed to create order", Response: responseData}
 }
 
-type OrderError struct {
+type CreateOrderError struct {
 	ErrorMsg string
-	Response map[string]interface{}
+	Response map[string]any
 }
 
-func (e *OrderError) Error() string {
+func (e *CreateOrderError) Error() string {
 	return e.ErrorMsg
 }
