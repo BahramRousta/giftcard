@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"errors"
 	adaptor "giftCard/internal/adaptor/giftcard"
+	"giftCard/internal/usecase"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
@@ -12,10 +14,19 @@ func ShopItem(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "productId is required")
 	}
 
-	gf := adaptor.NewGiftCard()
-	data, err := gf.ShopItem(productId)
+	data, err := usecase.ShopItemUseCase(productId)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		if err != nil {
+			var shopItemErr *adaptor.ShopItemError
+			if errors.As(err, &shopItemErr) {
+				return c.JSON(http.StatusBadRequest, map[string]interface{}{
+					"message": shopItemErr.Response["message"],
+					"success": false,
+					"data":    map[string]any{},
+				})
+			}
+			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+		}
 	}
-	return c.JSON(http.StatusOK, data)
+	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
 }

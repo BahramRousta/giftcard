@@ -2,7 +2,6 @@ package adaptor
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,19 +28,29 @@ func (g *GiftCard) ShopItem(productId string) (map[string]any, error) {
 	}
 
 	defer res.Body.Close()
-	if res.StatusCode == http.StatusOK {
-		bodyBytes, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		var responseData map[string]any
-
-		err = json.Unmarshal(bodyBytes, &responseData)
-		if err != nil {
-			return nil, err
-		}
-		return responseData, nil
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("failed to fetch product's info")
+	var responseData map[string]any
+
+	err = json.Unmarshal(bodyBytes, &responseData)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == http.StatusOK {
+		return responseData, nil
+	} else {
+		return nil, &ShopItemError{ErrorMsg: "failed to fetch shop item", Response: responseData}
+	}
+}
+
+type ShopItemError struct {
+	ErrorMsg string
+	Response map[string]any
+}
+
+func (e *ShopItemError) Error() string {
+	return e.ErrorMsg
 }
