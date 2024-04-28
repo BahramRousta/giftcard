@@ -8,9 +8,9 @@ import (
 )
 
 func (g *GiftCard) RetrieveOrder(orderId string) (map[string]any, error) {
-	url := g.BaseUrl + fmt.Sprintf("/order/get?%s", orderId)
+	url := g.BaseUrl + fmt.Sprintf("/order/get?orderId=%s", orderId)
 	method := "GET"
-
+	fmt.Println(url)
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {

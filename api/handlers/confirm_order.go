@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	adaptor "giftCard/internal/adaptor/giftcard"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
@@ -9,7 +10,7 @@ import (
 )
 
 type confirmOrderRequestBody struct {
-	orderId string `json:"orderId" validate:"required"`
+	OrderId string `json:"orderId" validate:"required"`
 }
 
 func ConfirmOrder(c echo.Context) error {
@@ -25,8 +26,9 @@ func ConfirmOrder(c echo.Context) error {
 		}
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": strings.Join(messages, ", ")})
 	}
+	fmt.Println("req.body again", requestBody.OrderId)
 	gf := adaptor.NewGiftCard()
-	data, err := gf.ConfirmOrder(requestBody.orderId)
+	data, err := gf.ConfirmOrder(requestBody.OrderId)
 	if err != nil {
 		if orderErr, ok := err.(*adaptor.ConfirmOrderError); ok {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{

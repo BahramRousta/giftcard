@@ -25,6 +25,7 @@ func (g *GiftCard) ConfirmOrder(orderId string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	token, err := g.Auth()
 	if err != nil {
 		return nil, err
@@ -32,6 +33,7 @@ func (g *GiftCard) ConfirmOrder(orderId string) (map[string]any, error) {
 
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", token)
+	fmt.Println("req.body", req.Body)
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
