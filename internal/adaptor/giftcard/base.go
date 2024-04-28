@@ -1,7 +1,7 @@
 package adaptor
 
 import (
-	"giftCard/util"
+	"giftCard/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -12,7 +12,7 @@ type GiftCard struct {
 }
 
 func NewGiftCard() *GiftCard {
-	config, err := util.LoadConfig(".")
+	config, err := config.LoadConfig(".")
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot load config")
 	}

@@ -3,6 +3,7 @@ package api
 import (
 	"giftCard/api/handlers"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 type Server struct {
@@ -11,6 +12,7 @@ type Server struct {
 
 func NewServer() *Server {
 	e := echo.New()
+	e.Use(middleware.Logger())
 	return &Server{e}
 }
 
