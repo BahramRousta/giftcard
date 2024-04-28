@@ -8,17 +8,13 @@ import (
 	"net/http"
 )
 
-func (g *GiftCard) CreateOrder(productList []map[string]any) (map[string]any, error) {
-	url := g.BaseUrl + "/order/create"
-	method := "POST"
-
+func (g *GiftCard) ConfirmOrder(orderId string) (map[string]any, error) {
+	url := g.BaseUrl + "/order/confirm"
+	method := "PUT"
 	client := &http.Client{}
-
+	fmt.Println(url)
 	payload := map[string]any{
-		"productList": productList,
-		"wallet":      "EUR",
-		"reference":   "Test Reference",
-		"webhookUrl":  "YOUR WEBHOOK URL",
+		"orderId": orderId,
 	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -29,7 +25,6 @@ func (g *GiftCard) CreateOrder(productList []map[string]any) (map[string]any, er
 	if err != nil {
 		return nil, err
 	}
-
 	token, err := g.Auth()
 	if err != nil {
 		return nil, err
@@ -37,7 +32,6 @@ func (g *GiftCard) CreateOrder(productList []map[string]any) (map[string]any, er
 
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", token)
-
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -54,19 +48,18 @@ func (g *GiftCard) CreateOrder(productList []map[string]any) (map[string]any, er
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(responseData)
 
 	if res.StatusCode == http.StatusOK {
 		return responseData, nil
 	}
-	return nil, &OrderError{ErrorMsg: "failed to create order", Response: responseData}
+	return nil, &ConfirmOrderError{ErrorMsg: "failed to create order", Response: responseData}
 }
 
-type OrderError struct {
+type ConfirmOrderError struct {
 	ErrorMsg string
 	Response map[string]interface{}
 }
 
-func (e *OrderError) Error() string {
+func (e *ConfirmOrderError) Error() string {
 	return e.ErrorMsg
 }
