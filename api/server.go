@@ -20,4 +20,5 @@ func (s *Server) SetupRoutes() {
 	s.GET("/shop/product/info", handlers.ShopItem)
 	s.POST("/order/create", handlers.CreateOrder)
 	s.POST("/order/confirm", handlers.ConfirmOrder)
+	s.GET("/order/get", handlers.RetrieveOrder)
 }
