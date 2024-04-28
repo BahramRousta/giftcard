@@ -6,11 +6,11 @@ import (
 	"net/http"
 )
 
-func CustomerInfo(c echo.Context) error {
+func ShopList(c echo.Context) error {
 	gf := adaptor.NewGiftCard()
-	data, err := gf.CustomerInfo()
+	data, err := gf.ShopList()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, data)
 }
