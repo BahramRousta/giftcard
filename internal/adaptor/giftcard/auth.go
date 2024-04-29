@@ -2,7 +2,6 @@ package adaptor
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 )
 
@@ -25,7 +24,7 @@ func (g *GiftCard) Auth() (string, error) {
 	}
 
 	defer res.Body.Close()
-	fmt.Println(res.StatusCode)
+
 	if res.StatusCode == http.StatusOK {
 		authHeader := res.Header.Get("Authorization")
 		return authHeader, nil
