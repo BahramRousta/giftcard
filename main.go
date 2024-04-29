@@ -31,7 +31,10 @@ func main() {
 	shopItemService := service.NewShopItemService(productRepo, variantRepo)
 	shopItemHandler := api.NewShopItemHandler(shopItemService)
 
-	server.SetupRoutes(customerHandler, shopItemHandler)
+	shopListService := service.NewShopListService()
+	shopListHandler := api.NewShopListHandler(shopListService)
+
+	server.SetupRoutes(customerHandler, shopItemHandler, shopListHandler)
 
 	server.Logger.Fatal(server.Start(":8000"))
 

@@ -1,15 +1,25 @@
-package handlers
+package api
 
 import (
 	"errors"
 	adaptor "giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/usecase"
+	"giftCard/internal/service"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func ShopList(c echo.Context) error {
-	data, err := usecase.ShopListUseCase()
+type ShopListHandler struct {
+	shopListService *service.ShopListService
+}
+
+func NewShopListHandler(service *service.ShopListService) *ShopListHandler {
+	return &ShopListHandler{
+		shopListService: service,
+	}
+}
+
+func (h *ShopListHandler) ShopList(c echo.Context) error {
+	data, err := h.shopListService.GetShopListService()
 	if err != nil {
 		if err != nil {
 			var shopListErr *adaptor.ShopListError

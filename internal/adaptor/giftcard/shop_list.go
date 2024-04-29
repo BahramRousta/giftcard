@@ -44,7 +44,7 @@ func (g *GiftCard) ShopList() (map[string]any, error) {
 	if res.StatusCode == http.StatusOK {
 		return responseData, nil
 	} else {
-		return nil, &CustomerInfoError{ErrorMsg: "failed to fetch shop list", Response: responseData}
+		return nil, &ShopListError{ErrorMsg: "failed to fetch shop list", Response: responseData}
 	}
 }
 
