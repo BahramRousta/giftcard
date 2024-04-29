@@ -1,9 +1,9 @@
-package handlers
+package api
 
 import (
 	"errors"
 	adaptor "giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/usecase"
+	"giftCard/internal/service"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -13,15 +13,25 @@ import (
 type Product struct {
 	Sku         string `json:"sku" validate:"required"`
 	ProductType string `json:"productType" validate:"required"`
-	Quote       int    `json:"quote" validate:"required,gt=0"`
-	Quantity    int    `json:"quantity" validate:"required,gt=0"`
+	Quote       uint   `json:"quote" validate:"required,gt=0"`
+	Quantity    uint   `json:"quantity" validate:"required,gt=0"`
 }
 
 type RequestBody struct {
 	ProductList []Product `json:"productList" validate:"required,dive"`
 }
 
-func CreateOrder(c echo.Context) error {
+type CreateOrderHandler struct {
+	service *service.OrderService
+}
+
+func NewCreateOrderHandler(service *service.OrderService) *CreateOrderHandler {
+	return &CreateOrderHandler{
+		service: service,
+	}
+}
+
+func (h *CreateOrderHandler) CreateOrder(c echo.Context) error {
 	var requestBody RequestBody
 	if err := c.Bind(&requestBody); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Bad Request"})
@@ -50,14 +60,14 @@ func CreateOrder(c echo.Context) error {
 		productList = append(productList, productMap)
 	}
 
-	data, err := usecase.CreateOrderUseCase(productList)
+	data, err := h.service.CreateOrderService(productList)
 
 	if err != nil {
 		if err != nil {
 			var orderErr *adaptor.CreateOrderError
 			if errors.As(err, &orderErr) {
 				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"message": orderErr.Response["message"],
+					"message": orderErr.Response,
 					"success": false,
 					"data":    map[string]any{},
 				})
@@ -65,5 +75,5 @@ func CreateOrder(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
 		}
 	}
-	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
+	return c.JSON(http.StatusCreated, map[string]any{"data": data, "message": "", "success": true})
 }
