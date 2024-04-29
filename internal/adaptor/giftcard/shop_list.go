@@ -2,12 +2,13 @@ package adaptor
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 )
 
-func (g *GiftCard) ShopList() (map[string]any, error) {
-	url := g.BaseUrl + "/shop/products"
+func (g *GiftCard) ShopList(pageSize int, pageToken string) (map[string]any, error) {
+	url := fmt.Sprintf("%s/shop/products?pageSize=%d&pageToken=%s", g.BaseUrl, pageSize, pageToken)
 	method := "GET"
 
 	client := &http.Client{}

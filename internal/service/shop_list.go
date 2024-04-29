@@ -11,9 +11,9 @@ func NewShopListService() *ShopListService {
 	return &ShopListService{}
 }
 
-func (s *ShopListService) GetShopListService() (map[string]any, error) {
+func (s *ShopListService) GetShopListService(pageSize int, pageToken string) (map[string]any, error) {
 	gf := adaptor.NewGiftCard()
-	data, err := gf.ShopList()
+	data, err := gf.ShopList(pageSize, pageToken)
 	if err != nil {
 		return map[string]any{}, err
 	}
