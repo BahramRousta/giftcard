@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type Order struct {
 	ID          uint `gorm:"primaryKey"`
@@ -9,6 +11,7 @@ type Order struct {
 	ProductType string
 	Quote       uint
 	Quantity    uint
+	Status      string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
 }

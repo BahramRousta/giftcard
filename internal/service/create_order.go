@@ -9,10 +9,10 @@ import (
 )
 
 type OrderService struct {
-	repo *repository.CreateOrderRepository
+	repo *repository.OrderRepository
 }
 
-func NewCreateOrderService(repo *repository.CreateOrderRepository) *OrderService {
+func NewCreateOrderService(repo *repository.OrderRepository) *OrderService {
 	return &OrderService{
 		repo: repo,
 	}
@@ -33,6 +33,7 @@ func (s *OrderService) CreateOrderService(productList []map[string]any) (adaptor
 		ProductType: productList[0]["productType"].(string),
 		Quote:       productList[0]["quote"].(uint),
 		Quantity:    productList[0]["quantity"].(uint),
+		Status:      data.Data.Invoice.Status,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}

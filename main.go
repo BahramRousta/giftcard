@@ -34,11 +34,14 @@ func main() {
 	shopListService := service.NewShopListService()
 	shopListHandler := api.NewShopListHandler(shopListService)
 
-	createOrderRepo := repository.NewCreateOrderRepository(gorm)
-	createOrderService := service.NewCreateOrderService(createOrderRepo)
+	orderRepo := repository.NewOrderRepository(gorm)
+	createOrderService := service.NewCreateOrderService(orderRepo)
 	createOrderHandler := api.NewCreateOrderHandler(createOrderService)
 
-	server.SetupRoutes(customerHandler, shopItemHandler, shopListHandler, createOrderHandler)
+	getOrderService := service.NewRetrieveOrderService(orderRepo)
+	getOrderHandler := api.NewRetrieveOrderHandler(getOrderService)
+
+	server.SetupRoutes(customerHandler, shopItemHandler, shopListHandler, createOrderHandler, getOrderHandler)
 
 	server.Logger.Fatal(server.Start(":8000"))
 

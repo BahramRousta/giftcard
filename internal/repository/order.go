@@ -1,20 +1,29 @@
 package repository
 
 import (
+	"errors"
 	"giftCard/internal/model"
 	"gorm.io/gorm"
 )
 
-type CreateOrderRepository struct {
+type OrderRepository struct {
 	DB *gorm.DB
 }
 
-func NewCreateOrderRepository(db *gorm.DB) *CreateOrderRepository {
-	return &CreateOrderRepository{
+func NewOrderRepository(db *gorm.DB) *OrderRepository {
+	return &OrderRepository{
 		db,
 	}
 }
 
-func (repo *CreateOrderRepository) InsertOrder(order *model.Order) error {
+func (repo *OrderRepository) InsertOrder(order *model.Order) error {
 	return repo.DB.Create(order).Error
+}
+
+func (repo *OrderRepository) GetOrder(orderId string) (*model.Order, error) {
+	var order model.Order
+	if err := repo.DB.Where("order_id = ?", orderId).First(&order).Error; err != nil {
+		return nil, errors.New("order not found")
+	}
+	return &order, nil
 }

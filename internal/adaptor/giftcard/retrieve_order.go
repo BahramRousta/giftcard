@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// RetrieveOrder use to get latest status of order
 func (g *GiftCard) RetrieveOrder(orderId string) (map[string]any, error) {
 	url := g.BaseUrl + fmt.Sprintf("/order/get?orderId=%s", orderId)
 	method := "GET"

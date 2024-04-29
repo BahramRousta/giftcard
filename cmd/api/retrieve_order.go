@@ -1,7 +1,9 @@
-package handlers
+package api
 
 import (
+	"errors"
 	adaptor "giftCard/internal/adaptor/giftcard"
+	"giftCard/internal/service"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
@@ -10,7 +12,17 @@ type retrieveOrderRequest struct {
 	OrderId string `json:"orderId" query:"orderId" validate:"required"`
 }
 
-func RetrieveOrder(c echo.Context) error {
+type RetrieveOrderHandler struct {
+	service *service.RetrieveOrderService
+}
+
+func NewRetrieveOrderHandler(service *service.RetrieveOrderService) *RetrieveOrderHandler {
+	return &RetrieveOrderHandler{
+		service: service,
+	}
+}
+
+func (h *RetrieveOrderHandler) RetrieveOrder(c echo.Context) error {
 
 	var request retrieveOrderRequest
 
@@ -23,16 +35,16 @@ func RetrieveOrder(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Order ID is required"})
 	}
 
-	gf := adaptor.NewGiftCard()
-	data, err := gf.RetrieveOrder(orderId)
+	data, err := h.service.GetOrderStatusService(orderId)
 	if err != nil {
-		if retrieveErr, ok := err.(*adaptor.RetrieveOrderError); ok {
+		var retrieveErr *adaptor.RetrieveOrderError
+		if errors.As(err, &retrieveErr) {
 			return c.JSON(http.StatusBadRequest, map[string]any{
 				"error":   retrieveErr.ErrorMsg,
 				"message": retrieveErr.Response,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
 	}
-	return c.JSON(http.StatusOK, data)
+	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
 }
