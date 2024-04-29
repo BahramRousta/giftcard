@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	adaptor "giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/service"
 	"github.com/labstack/echo/v4"
@@ -21,7 +20,7 @@ func NewCustomerInfoHandler(s *service.CustomerService) *CustomerInfoHandler {
 
 func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	data, err := h.customerService.GetCustomerInfoService()
-	fmt.Println("data", data)
+
 	if err != nil {
 		if err != nil {
 			var customerErr *adaptor.CustomerInfoError
@@ -35,5 +34,5 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
 		}
 	}
-	return c.JSON(http.StatusCreated, map[string]any{"data": data, "message": "", "success": true})
+	return c.JSON(http.StatusOK, map[string]any{"data": data.Data, "message": "", "success": true})
 }
