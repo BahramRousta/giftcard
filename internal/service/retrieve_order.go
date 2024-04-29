@@ -28,8 +28,19 @@ func (s *RetrieveOrderService) GetOrderStatusService(orderId string) (map[string
 
 	gf := adaptor.NewGiftCard()
 	data, err := gf.RetrieveOrder(orderId)
-	if err != nil {
+
+	invoice, ok := data["data"].(map[string]interface{})["invoice"].(map[string]interface{})
+	if !ok {
 		return nil, err
 	}
+
+	status, ok := invoice["status"].(string)
+	if !ok {
+		return nil, err
+	}
+	if err := s.repo.UpdateOrder(order, status); err != nil {
+		return nil, err
+	}
+
 	return data, nil
 }

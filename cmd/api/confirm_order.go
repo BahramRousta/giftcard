@@ -2,8 +2,8 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	adaptor "giftCard/internal/adaptor/giftcard"
+	"giftCard/internal/service"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -14,7 +14,17 @@ type confirmOrderRequestBody struct {
 	OrderId string `json:"orderId" validate:"required"`
 }
 
-func ConfirmOrder(c echo.Context) error {
+type ConfirmOrderHandler struct {
+	service *service.ConfirmOrderService
+}
+
+func NewConfirmOrderHandler(service *service.ConfirmOrderService) *ConfirmOrderHandler {
+	return &ConfirmOrderHandler{
+		service: service,
+	}
+}
+
+func (h *ConfirmOrderHandler) ConfirmOrder(c echo.Context) error {
 	var requestBody confirmOrderRequestBody
 	if err := c.Bind(&requestBody); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Bad Request"})
@@ -27,9 +37,8 @@ func ConfirmOrder(c echo.Context) error {
 		}
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": strings.Join(messages, ", ")})
 	}
-	fmt.Println("req.body again", requestBody.OrderId)
-	gf := adaptor.NewGiftCard()
-	data, err := gf.ConfirmOrder(requestBody.OrderId)
+
+	data, err := h.service.OrderConfirmService(requestBody.OrderId)
 	if err != nil {
 		var orderErr *adaptor.ConfirmOrderError
 		if errors.As(err, &orderErr) {
@@ -38,7 +47,7 @@ func ConfirmOrder(c echo.Context) error {
 				"payload": orderErr.Response,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Something went wrong"})
+		return c.JSON(http.StatusInternalServerError, err.Error())
 	}
 	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
 }

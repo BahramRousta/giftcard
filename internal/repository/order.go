@@ -27,3 +27,11 @@ func (repo *OrderRepository) GetOrder(orderId string) (*model.Order, error) {
 	}
 	return &order, nil
 }
+
+func (repo *OrderRepository) UpdateOrder(order *model.Order, newStatus string) error {
+	order.Status = newStatus
+	if err := repo.DB.Save(order).Error; err != nil {
+		return err // Return error if there's a problem saving the order
+	}
+	return nil
+}

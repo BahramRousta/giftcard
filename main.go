@@ -41,7 +41,10 @@ func main() {
 	getOrderService := service.NewRetrieveOrderService(orderRepo)
 	getOrderHandler := api.NewRetrieveOrderHandler(getOrderService)
 
-	server.SetupRoutes(customerHandler, shopItemHandler, shopListHandler, createOrderHandler, getOrderHandler)
+	confirmOrderService := service.NewConfirmOrderService(orderRepo)
+	confirmOrderHandler := api.NewConfirmOrderHandler(confirmOrderService)
+
+	server.SetupRoutes(customerHandler, shopItemHandler, shopListHandler, createOrderHandler, getOrderHandler, confirmOrderHandler)
 
 	server.Logger.Fatal(server.Start(":8000"))
 

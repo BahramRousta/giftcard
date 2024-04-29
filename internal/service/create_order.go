@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/model"
 	"giftCard/internal/repository"
@@ -24,8 +23,6 @@ func (s *OrderService) CreateOrderService(productList []map[string]any) (adaptor
 	if err != nil {
 		return adaptor.OrderResponse{}, err
 	}
-	fmt.Println("data", data)
-	fmt.Println("productList", productList)
 
 	order := &model.Order{
 		OrderID:     data.Data.ID,
