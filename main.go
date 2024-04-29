@@ -26,7 +26,12 @@ func main() {
 	customerService := service.NewCustomerService(walletRepo, exchangeRepo)
 	customerHandler := api.NewCustomerInfoHandler(customerService)
 
-	server.SetupRoutes(customerHandler)
+	productRepo := repository.NewProductRepository(gorm)
+	variantRepo := repository.NewVariantRepository(gorm)
+	shopItemService := service.NewShopItemService(productRepo, variantRepo)
+	shopItemHandler := api.NewShopItemHandler(shopItemService)
+
+	server.SetupRoutes(customerHandler, shopItemHandler)
 
 	server.Logger.Fatal(server.Start(":8000"))
 

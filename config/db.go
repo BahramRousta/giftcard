@@ -23,6 +23,7 @@ func DatabaseInit() {
 
 	database.AutoMigrate(&model.Wallet{})
 	database.AutoMigrate(&model.ExchangeRate{})
+	database.AutoMigrate(&model.Product{}, &model.Variant{})
 
 	if e != nil {
 		panic(e)
