@@ -2,14 +2,14 @@ package adaptor
 
 import (
 	"errors"
-	"giftCard/config"
+	rds "giftCard/internal/adaptor/redis"
 	"github.com/gomodule/redigo/redis"
 	"net/http"
 )
 
 func (g *GiftCard) Auth() (string, error) {
 
-	conn := config.GetRedisConn()
+	conn := rds.GetRedisConn()
 	defer conn.Close()
 	token, err := redis.String(conn.Do("GET", "giftcard_token"))
 

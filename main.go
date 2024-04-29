@@ -4,6 +4,7 @@ import (
 	"giftCard/cmd/api"
 	"giftCard/cmd/server"
 	"giftCard/config"
+	"giftCard/internal/adaptor/redis"
 	"giftCard/internal/repository"
 	"giftCard/internal/service"
 )
@@ -29,7 +30,7 @@ func main() {
 	//	Port:     6379,
 	//}
 
-	config.RedisInit()
+	redis.RedisInit()
 
 	walletRepo := repository.NewWalletRepository(gorm)
 	exchangeRepo := repository.NewExchangeRepository(gorm)
