@@ -1,6 +1,7 @@
-package handlers
+package api
 
 import (
+	"errors"
 	"fmt"
 	adaptor "giftCard/internal/adaptor/giftcard"
 	"github.com/go-playground/validator"
@@ -30,13 +31,14 @@ func ConfirmOrder(c echo.Context) error {
 	gf := adaptor.NewGiftCard()
 	data, err := gf.ConfirmOrder(requestBody.OrderId)
 	if err != nil {
-		if orderErr, ok := err.(*adaptor.ConfirmOrderError); ok {
+		var orderErr *adaptor.ConfirmOrderError
+		if errors.As(err, &orderErr) {
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error":   orderErr.ErrorMsg,
 				"payload": orderErr.Response,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Something went wrong"})
 	}
-	return c.JSON(http.StatusCreated, data)
+	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
 }
