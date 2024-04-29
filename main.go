@@ -21,6 +21,16 @@ func main() {
 
 	dbGorm.Ping()
 
+	// initial redis
+	//redisConfig := config.Redis{
+	//	Password: "password",
+	//	DB:       0,
+	//	Host:     "localhost",
+	//	Port:     6379,
+	//}
+
+	config.RedisInit()
+
 	walletRepo := repository.NewWalletRepository(gorm)
 	exchangeRepo := repository.NewExchangeRepository(gorm)
 	customerService := service.NewCustomerService(walletRepo, exchangeRepo)
@@ -44,7 +54,14 @@ func main() {
 	confirmOrderService := service.NewConfirmOrderService(orderRepo)
 	confirmOrderHandler := api.NewConfirmOrderHandler(confirmOrderService)
 
-	server.SetupRoutes(customerHandler, shopItemHandler, shopListHandler, createOrderHandler, getOrderHandler, confirmOrderHandler)
+	server.SetupRoutes(
+		customerHandler,
+		shopItemHandler,
+		shopListHandler,
+		createOrderHandler,
+		getOrderHandler,
+		confirmOrderHandler,
+	)
 
 	server.Logger.Fatal(server.Start(":8000"))
 

@@ -2,11 +2,22 @@ package adaptor
 
 import (
 	"errors"
+	"giftCard/config"
+	"github.com/gomodule/redigo/redis"
 	"net/http"
 )
 
 func (g *GiftCard) Auth() (string, error) {
-	url := "https://sandbox-api.core.hub.gift/auth/jwt"
+
+	conn := config.GetRedisConn()
+	defer conn.Close()
+	token, err := redis.String(conn.Do("GET", "giftcard_token"))
+
+	if err == nil {
+		return token, nil
+	}
+
+	url := g.BaseUrl + "/auth/jwt"
 	method := "GET"
 
 	client := &http.Client{}
@@ -27,6 +38,7 @@ func (g *GiftCard) Auth() (string, error) {
 
 	if res.StatusCode == http.StatusOK {
 		authHeader := res.Header.Get("Authorization")
+		conn.Do("SET", "giftcard_token", authHeader, "EX", 3600)
 		return authHeader, nil
 	}
 	return "", errors.New("authentication failed")
