@@ -2,7 +2,7 @@ package api
 
 import (
 	"errors"
-	adaptor "giftCard/internal/adaptor/giftcard"
+	gftErr "giftCard/internal/adaptor/gft_error"
 	"giftCard/internal/service"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -28,12 +28,12 @@ func (h *RetrieveOrderHandler) RetrieveOrder(c echo.Context) error {
 	var request retrieveOrderRequest
 
 	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Bad Request"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"gft_error": "Bad Request"})
 	}
 
 	orderId := request.OrderId
 	if orderId == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Order ID is required"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"gft_error": "Order ID is required"})
 	}
 
 	data, err := h.service.GetOrderStatusService(orderId)
@@ -45,7 +45,7 @@ func (h *RetrieveOrderHandler) RetrieveOrder(c echo.Context) error {
 				"success": false,
 			})
 		}
-		var forbiddenErr *adaptor.ForbiddenErr
+		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
 			return c.JSON(http.StatusForbidden, map[string]any{
 				"message": forbiddenErr.ErrMsg,
@@ -53,11 +53,11 @@ func (h *RetrieveOrderHandler) RetrieveOrder(c echo.Context) error {
 				"success": false,
 			})
 		}
-		var retrieveErr *adaptor.RetrieveOrderError
-		if errors.As(err, &retrieveErr) {
+		var reqErr *gftErr.RequestErr
+		if errors.As(err, &reqErr) {
 			return c.JSON(http.StatusBadRequest, map[string]any{
-				"message": retrieveErr.ErrorMsg,
-				"data":    retrieveErr.Response,
+				"message": reqErr.ErrMsg,
+				"data":    reqErr.Response,
 				"success": false,
 			})
 		}
