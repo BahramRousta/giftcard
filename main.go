@@ -4,6 +4,7 @@ import (
 	"giftCard/cmd/api"
 	"giftCard/cmd/server"
 	"giftCard/config"
+	"giftCard/internal/adaptor/db"
 	"giftCard/internal/adaptor/redis"
 	"giftCard/internal/repository"
 	"giftCard/internal/service"
@@ -11,9 +12,13 @@ import (
 
 func main() {
 	server := server.NewServer()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		panic(err)
+	}
 
-	config.DatabaseInit()
-	gorm := config.DB()
+	db.DatabaseInit(cfg)
+	gorm := db.DB()
 
 	dbGorm, err := gorm.DB()
 	if err != nil {
@@ -22,15 +27,7 @@ func main() {
 
 	dbGorm.Ping()
 
-	// initial redis
-	//redisConfig := config.Redis{
-	//	Password: "password",
-	//	DB:       0,
-	//	Host:     "localhost",
-	//	Port:     6379,
-	//}
-
-	redis.RedisInit()
+	redis.RedisInit(cfg)
 
 	walletRepo := repository.NewWalletRepository(gorm)
 	exchangeRepo := repository.NewExchangeRepository(gorm)

@@ -11,13 +11,13 @@ import (
 
 var redisPool *redis.Pool
 
-func RedisInit(cnf config.Redis) {
+func RedisInit(cnf *config.Config) {
 	redisPool = &redis.Pool{
 		MaxIdle:     10,
 		MaxActive:   100,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			conn, err := redis.Dial("tcp", fmt.Sprintf("%s:%d", cnf.Host, cnf.Port))
+			conn, err := redis.Dial("tcp", fmt.Sprintf("%s:%s", cnf.Redis.Host, cnf.Redis.Port))
 			if err != nil {
 				log.Printf("ERROR: fail init redis: %s", err.Error())
 				os.Exit(1)

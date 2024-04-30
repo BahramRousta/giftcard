@@ -30,7 +30,9 @@ func (h *ShopListHandler) ShopList(c echo.Context) error {
 
 	pageSizeHeader := c.Request().Header.Get("PageSize")
 	pageSize, err := strconv.Atoi(pageSizeHeader)
+
 	if err != nil {
+		c.Logger().Error("Error in page size", err)
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
 			"message": "pageSize must be an integer",
 			"success": false,
