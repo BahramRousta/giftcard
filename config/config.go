@@ -1,27 +1,32 @@
 package config
 
 import (
+	"fmt"
 	"github.com/spf13/viper"
+	"os"
 )
 
 type Config struct {
-	BaseUrl      string `mapstructure:"BASE_URL"`
-	ClientId     string `mapstructure:"CLIENT_ID"`
-	ClientSecret string `mapstructure:"CLIENT_SECRET"`
+	Service  GiftCard `mapstructure:"service"`
+	DataBase Postgres `mapstructure:"postgres"`
+	Redis    Redis    `mapstructure:"redis"`
 }
 
-func LoadConfig(path string) (config Config, err error) {
-	viper.AddConfigPath(path)
-	viper.SetConfigName("app")
-	viper.SetConfigType("env")
+func LoadConfig() (*Config, error) {
 
-	viper.AutomaticEnv()
+	var config *Config
+
+	dir, err := os.Getwd()
+	viper.AddConfigPath(dir)
+
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
 
 	err = viper.ReadInConfig()
 	if err != nil {
-		return
+		return nil, fmt.Errorf("could not read config file: %v", err)
 	}
 
 	err = viper.Unmarshal(&config)
-	return
+	return config, nil
 }

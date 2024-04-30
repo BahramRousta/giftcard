@@ -18,15 +18,15 @@ type GiftCard struct {
 }
 
 func NewGiftCard() *GiftCard {
-	config, err := config.LoadConfig(".")
+	config, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot load config")
 	}
 
 	return &GiftCard{
-		BaseUrl:      config.BaseUrl,
-		ClientID:     config.ClientId,
-		ClientSecret: config.ClientSecret,
+		BaseUrl:      config.Service.BaseUrl,
+		ClientID:     config.Service.ClientID,
+		ClientSecret: config.Service.ClientSecret,
 	}
 }
 
