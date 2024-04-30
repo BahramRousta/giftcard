@@ -11,7 +11,6 @@ type Wallet struct {
 	UpdatedAt     time.Time `gorm:"autoUpdateTime"`
 }
 
-// TableName sets the table name for the Wallet model
 func (Wallet) TableName() string {
 	return "Wallet"
 }

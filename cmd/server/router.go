@@ -2,7 +2,8 @@ package server
 
 import "giftCard/cmd/api"
 
-func (s *Server) SetupRoutes(customerHandler *api.CustomerInfoHandler,
+func (s *Server) SetupRoutes(
+	customerHandler *api.CustomerInfoHandler,
 	shopItemHandler *api.ShopItemHandler,
 	shopListHandler *api.ShopListHandler,
 	createOrderHandler *api.CreateOrderHandler,
