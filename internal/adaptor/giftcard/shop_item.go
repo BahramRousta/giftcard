@@ -64,7 +64,7 @@ func (g *GiftCard) ShopItem(productId string) (ProductResponse, error) {
 	if err != nil {
 		return ProductResponse{}, err
 	}
-	fmt.Println("stringbody", string(bodyBytes))
+
 	if res.StatusCode != http.StatusOK {
 		return ProductResponse{}, &ShopItemError{ErrorMsg: "failed to fetch shop item", Response: bodyBytes}
 	}
@@ -74,7 +74,7 @@ func (g *GiftCard) ShopItem(productId string) (ProductResponse, error) {
 	if err != nil {
 		return ProductResponse{}, err
 	}
-	fmt.Println("responseData", responseData)
+
 	return responseData, nil
 }
 
