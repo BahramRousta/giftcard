@@ -2,7 +2,7 @@ package api
 
 import (
 	"errors"
-	adaptor "giftCard/internal/adaptor/giftcard"
+	gftErr "giftCard/internal/adaptor/gft_error"
 	"giftCard/internal/service"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
@@ -34,7 +34,11 @@ func NewCreateOrderHandler(service *service.OrderService) *CreateOrderHandler {
 func (h *CreateOrderHandler) CreateOrder(c echo.Context) error {
 	var requestBody RequestBody
 	if err := c.Bind(&requestBody); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Bad Request"})
+		return c.JSON(http.StatusBadRequest, map[string]any{
+			"data":    "",
+			"message": "bad request",
+			"success": false,
+		})
 	}
 
 	validate := validator.New()
@@ -43,10 +47,18 @@ func (h *CreateOrderHandler) CreateOrder(c echo.Context) error {
 		for _, fieldErr := range err.(validator.ValidationErrors) {
 			messages = append(messages, fieldErr.Field()+" is invalid")
 		}
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": strings.Join(messages, ", ")})
+		return c.JSON(http.StatusBadRequest, map[string]any{
+			"data":    strings.Join(messages, ", "),
+			"message": "",
+			"success": false,
+		})
 	}
 	if len(requestBody.ProductList) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "ProductList cannot be empty"})
+		return c.JSON(http.StatusBadRequest, map[string]any{
+			"data":    "",
+			"message": "product list can not be empty",
+			"success": false,
+		})
 	}
 
 	var productList []map[string]interface{}
@@ -63,17 +75,27 @@ func (h *CreateOrderHandler) CreateOrder(c echo.Context) error {
 	data, err := h.service.CreateOrderService(productList)
 
 	if err != nil {
-		if err != nil {
-			var orderErr *adaptor.CreateOrderError
-			if errors.As(err, &orderErr) {
-				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"message": orderErr.Response,
-					"success": false,
-					"data":    map[string]any{},
-				})
-			}
-			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+		var forbiddenErr *gftErr.ForbiddenErr
+		if errors.As(err, &forbiddenErr) {
+			return c.JSON(http.StatusForbidden, map[string]any{
+				"message": forbiddenErr.ErrMsg,
+				"data":    "",
+				"success": false,
+			})
 		}
+		var reqErr *gftErr.RequestErr
+		if errors.As(err, &reqErr) {
+			return c.JSON(http.StatusBadRequest, map[string]any{
+				"message": reqErr.ErrMsg,
+				"data":    reqErr.Response,
+				"success": false,
+			})
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, map[string]any{
+			"data":    "",
+			"message": "something went wrong",
+			"success": false,
+		})
 	}
 	return c.JSON(http.StatusCreated, map[string]any{"data": data, "message": "", "success": true})
 }
