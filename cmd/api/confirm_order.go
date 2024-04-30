@@ -6,6 +6,7 @@ import (
 	"giftCard/internal/service"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 	"net/http"
 	"strings"
 )
@@ -40,14 +41,22 @@ func (h *ConfirmOrderHandler) ConfirmOrder(c echo.Context) error {
 
 	data, err := h.service.OrderConfirmService(requestBody.OrderId)
 	if err != nil {
-		var orderErr *adaptor.ConfirmOrderError
-		if errors.As(err, &orderErr) {
-			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-				"error":   orderErr.ErrorMsg,
-				"payload": orderErr.Response,
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusBadRequest, map[string]any{
+				"message": err.Error(),
+				"data":    "",
+				"success": false,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, err.Error())
+		var orderErr *adaptor.ConfirmOrderError
+		if errors.As(err, &orderErr) {
+			return c.JSON(http.StatusBadRequest, map[string]interface{}{
+				"message": orderErr.ErrorMsg,
+				"data":    orderErr.Response,
+				"success": false,
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]any{"data": "", "message": err.Error(), "success": false})
 	}
 	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
 }

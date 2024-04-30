@@ -3,7 +3,6 @@ package adaptor
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -12,7 +11,7 @@ func (g *GiftCard) ConfirmOrder(orderId string) (map[string]any, error) {
 	url := g.BaseUrl + "/order/confirm"
 	method := "PUT"
 	client := &http.Client{}
-	fmt.Println(url)
+
 	payload := map[string]any{
 		"orderId": orderId,
 	}
@@ -33,7 +32,7 @@ func (g *GiftCard) ConfirmOrder(orderId string) (map[string]any, error) {
 
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", token)
-	fmt.Println("req.body", req.Body)
+
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err

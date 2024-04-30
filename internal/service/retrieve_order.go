@@ -23,11 +23,14 @@ func (s *RetrieveOrderService) GetOrderStatusService(orderId string) (map[string
 		return nil, err
 	}
 	if order == nil {
-		return nil, fmt.Errorf("order with ID %s not found", orderId) // Return error if order does not exist
+		return nil, fmt.Errorf("order with ID %s not found", orderId)
 	}
 
 	gf := adaptor.NewGiftCard()
 	data, err := gf.RetrieveOrder(orderId)
+	if err != nil {
+		return nil, err
+	}
 
 	invoice, ok := data["data"].(map[string]interface{})["invoice"].(map[string]interface{})
 	if !ok {

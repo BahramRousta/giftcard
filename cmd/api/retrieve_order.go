@@ -5,6 +5,7 @@ import (
 	adaptor "giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/service"
 	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 	"net/http"
 )
 
@@ -37,14 +38,30 @@ func (h *RetrieveOrderHandler) RetrieveOrder(c echo.Context) error {
 
 	data, err := h.service.GetOrderStatusService(orderId)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusBadRequest, map[string]any{
+				"message": err.Error(),
+				"data":    "",
+				"success": false,
+			})
+		}
+		var forbiddenErr *adaptor.ForbiddenErr
+		if errors.As(err, &forbiddenErr) {
+			return c.JSON(http.StatusForbidden, map[string]any{
+				"message": forbiddenErr.ErrMsg,
+				"data":    "",
+				"success": false,
+			})
+		}
 		var retrieveErr *adaptor.RetrieveOrderError
 		if errors.As(err, &retrieveErr) {
 			return c.JSON(http.StatusBadRequest, map[string]any{
-				"error":   retrieveErr.ErrorMsg,
-				"message": retrieveErr.Response,
+				"message": retrieveErr.ErrorMsg,
+				"data":    retrieveErr.Response,
+				"success": false,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, map[string]any{"data": "", "message": err.Error(), "success": false})
 	}
-	return c.JSON(http.StatusCreated, map[string]any{"data": data["data"], "message": "", "success": true})
+	return c.JSON(http.StatusOK, map[string]any{"data": data["data"], "message": "", "success": true})
 }

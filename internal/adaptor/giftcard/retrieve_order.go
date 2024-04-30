@@ -2,6 +2,7 @@ package adaptor
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,26 +29,31 @@ func (g *GiftCard) RetrieveOrder(orderId string) (map[string]any, error) {
 
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("error while sending request")
 	}
 	defer res.Body.Close()
 
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("error while process response")
 	}
+
+	if res.StatusCode == http.StatusForbidden {
+		return nil, &ForbiddenErr{ErrMsg: "Forbidden to access end point."}
+	}
+
 	var responseData map[string]any
 
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("error while process response 1")
 	}
-	fmt.Println(responseData)
+	fmt.Println("responseData", responseData)
 
 	if res.StatusCode == http.StatusOK {
 		return responseData, nil
 	}
-	return nil, &RetrieveOrderError{ErrorMsg: "failed to retrieve order", Response: responseData}
+	return responseData, &RetrieveOrderError{ErrorMsg: "failed to retrieve order", Response: responseData}
 }
 
 type RetrieveOrderError struct {
@@ -57,4 +63,12 @@ type RetrieveOrderError struct {
 
 func (e *RetrieveOrderError) Error() string {
 	return e.ErrorMsg
+}
+
+type ForbiddenErr struct {
+	ErrMsg string
+}
+
+func (e *ForbiddenErr) Error() string {
+	return e.ErrMsg
 }

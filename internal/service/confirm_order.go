@@ -1,8 +1,6 @@
 package service
 
 import (
-	"errors"
-	"fmt"
 	adaptor "giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/repository"
 )
@@ -20,7 +18,7 @@ func NewConfirmOrderService(repo *repository.OrderRepository) *ConfirmOrderServi
 func (s *ConfirmOrderService) OrderConfirmService(orderId string) (map[string]any, error) {
 	order, err := s.repo.GetOrder(orderId)
 	if err != nil {
-		return nil, errors.New("order not found")
+		return nil, err
 	}
 
 	gf := adaptor.NewGiftCard()
@@ -32,13 +30,11 @@ func (s *ConfirmOrderService) OrderConfirmService(orderId string) (map[string]an
 
 	dataMap, ok := data["data"].(map[string]interface{})
 	if !ok {
-		fmt.Println("Data not found")
 		return nil, err
 	}
 
 	state, ok := dataMap["state"].(string)
 	if !ok {
-		fmt.Println("State not found")
 		return nil, err
 	}
 

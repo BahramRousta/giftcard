@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"errors"
 	"giftCard/internal/model"
 	"gorm.io/gorm"
 )
@@ -23,7 +22,7 @@ func (repo *OrderRepository) InsertOrder(order *model.Order) error {
 func (repo *OrderRepository) GetOrder(orderId string) (*model.Order, error) {
 	var order model.Order
 	if err := repo.DB.Where("order_id = ?", orderId).First(&order).Error; err != nil {
-		return nil, errors.New("order not found")
+		return nil, err
 	}
 	return &order, nil
 }
