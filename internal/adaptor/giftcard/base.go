@@ -1,8 +1,13 @@
 package adaptor
 
 import (
+	"encoding/json"
+	"errors"
 	"giftCard/config"
+	"giftCard/internal/adaptor/gft_error"
 	"github.com/rs/zerolog/log"
+	"io"
+	"net/http"
 )
 
 type GiftCard struct {
@@ -22,4 +27,47 @@ func NewGiftCard() *GiftCard {
 		ClientID:     config.ClientId,
 		ClientSecret: config.ClientSecret,
 	}
+}
+
+func (g *GiftCard) ProcessRequest(method string, url string) (map[string]any, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := g.Auth()
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", token)
+
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, errors.New("error while sending request")
+	}
+	defer res.Body.Close()
+
+	bodyBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, errors.New("error while process response")
+	}
+
+	if res.StatusCode == http.StatusForbidden {
+		return nil, &adaptor.ForbiddenErr{ErrMsg: "Forbidden to access end point."}
+	}
+
+	var responseData map[string]any
+
+	err = json.Unmarshal(bodyBytes, &responseData)
+	if err != nil {
+		return nil, errors.New("error while process response 1")
+	}
+
+	if res.StatusCode == http.StatusOK {
+		return responseData, nil
+	}
+	return responseData, &adaptor.RequestErr{ErrMsg: "error from provider", Response: responseData}
 }
