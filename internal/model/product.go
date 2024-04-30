@@ -1,6 +1,9 @@
 package model
 
+import "gorm.io/gorm"
+
 type Product struct {
+	gorm.Model
 	ID                                 uint `gorm:"primaryKey"`
 	BaseCurrency                       string
 	Country                            string

@@ -1,10 +1,12 @@
 package model
 
 import (
+	"gorm.io/gorm"
 	"time"
 )
 
 type Order struct {
+	gorm.Model
 	ID          uint `gorm:"primaryKey"`
 	SKU         string
 	OrderID     string

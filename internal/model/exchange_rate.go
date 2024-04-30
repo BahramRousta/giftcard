@@ -1,8 +1,12 @@
 package model
 
-import "time"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type ExchangeRate struct {
+	gorm.Model
 	ID             uint      `gorm:"primaryKey"`
 	BaseCurrency   string    `gorm:"column:base_currency;type:varchar(3);not null"`
 	TargetCurrency string    `gorm:"column:target_currency;type:varchar(3);not null"`

@@ -4,29 +4,12 @@ import (
 	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"log"
-	"net/http"
 	"os"
 	"time"
 )
 
 type Server struct {
 	*echo.Echo
-}
-
-func loggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-
-		log.Printf("Incoming Request: method:%s uri:%s body:%s", c.Request().Method, c.Request().URL.String(), c.Request().Body)
-
-		if err := next(c); err != nil {
-			c.Error(err)
-		}
-
-		log.Printf("Outgoing Response: status_code:%d status_message:%s", c.Response().Status, http.StatusText(c.Response().Status))
-
-		return nil
-	}
 }
 
 func NewServer() *Server {
