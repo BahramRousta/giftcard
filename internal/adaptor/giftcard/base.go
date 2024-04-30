@@ -1,6 +1,7 @@
 package adaptor
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"giftCard/config"
@@ -29,7 +30,7 @@ func NewGiftCard() *GiftCard {
 	}
 }
 
-func (g *GiftCard) ProcessRequest(method string, url string) (map[string]any, error) {
+func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (map[string]any, error) {
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
@@ -43,6 +44,10 @@ func (g *GiftCard) ProcessRequest(method string, url string) (map[string]any, er
 
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", token)
+
+	if payload != nil {
+		req.Body = io.NopCloser(bytes.NewBuffer(*payload))
+	}
 
 	res, err := client.Do(req)
 	if err != nil {

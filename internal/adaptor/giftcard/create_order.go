@@ -1,11 +1,7 @@
 package adaptor
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 )
 
 type ModifiedDate struct {
@@ -71,54 +67,32 @@ func (g *GiftCard) CreateOrder(productList []map[string]any) (OrderResponse, err
 	url := g.BaseUrl + "/order/create"
 	method := "POST"
 
-	client := &http.Client{}
-
 	payload := map[string]any{
 		"productList": productList,
 		"wallet":      "EUR",
 		"reference":   "Test Reference",
 		"webhookUrl":  "YOUR WEBHOOK URL",
 	}
+
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return OrderResponse{}, err
 	}
 
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(payloadBytes))
+	data, err := g.ProcessRequest(method, url, &payloadBytes)
 	if err != nil {
 		return OrderResponse{}, err
 	}
 
-	token, err := g.Auth()
-	if err != nil {
-		return OrderResponse{}, err
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", token)
-
-	res, err := client.Do(req)
-	if err != nil {
-		return OrderResponse{}, err
-	}
-	defer res.Body.Close()
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return OrderResponse{}, err
-	}
-
-	if res.StatusCode != http.StatusOK {
-		return OrderResponse{}, &CreateOrderError{ErrorMsg: "failed to fetch customer info", Response: bodyBytes}
-	}
+	jsonData, err := json.Marshal(data)
 
 	var responseData OrderResponse
-	err = json.Unmarshal(bodyBytes, &responseData)
+	err = json.Unmarshal(jsonData, &responseData)
 	if err != nil {
 		return OrderResponse{}, err
 	}
-	fmt.Println("responseData", responseData)
 	return responseData, nil
+
 }
 
 type CreateOrderError struct {

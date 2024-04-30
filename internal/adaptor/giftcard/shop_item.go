@@ -41,7 +41,7 @@ func (g *GiftCard) ShopItem(productId string) (ProductResponse, error) {
 	url := g.BaseUrl + fmt.Sprintf("/shop/products/%s", productId)
 	method := "GET"
 
-	data, err := g.ProcessRequest(method, url)
+	data, err := g.ProcessRequest(method, url, nil)
 	jsonData, err := json.Marshal(data)
 
 	var responseData ProductResponse
