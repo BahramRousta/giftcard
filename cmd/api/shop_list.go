@@ -3,7 +3,7 @@ package api
 import (
 	"errors"
 	"fmt"
-	adaptor "giftCard/internal/adaptor/giftcard"
+	gftErr "giftCard/internal/adaptor/gft_error"
 	"giftCard/internal/service"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
@@ -51,17 +51,23 @@ func (h *ShopListHandler) ShopList(c echo.Context) error {
 
 	data, err := h.shopListService.GetShopListService(pageSize, pageToken)
 	if err != nil {
-		if err != nil {
-			var shopListErr *adaptor.ShopListError
-			if errors.As(err, &shopListErr) {
-				return c.JSON(http.StatusBadRequest, map[string]interface{}{
-					"message": shopListErr.Response["message"],
-					"success": false,
-					"data":    map[string]any{},
-				})
-			}
-			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "Something went wrong"})
+		var forbiddenErr *gftErr.ForbiddenErr
+		if errors.As(err, &forbiddenErr) {
+			return c.JSON(http.StatusForbidden, map[string]any{
+				"message": forbiddenErr.ErrMsg,
+				"data":    "",
+				"success": false,
+			})
 		}
+		var reqErr *gftErr.RequestErr
+		if errors.As(err, &reqErr) {
+			return c.JSON(http.StatusBadRequest, map[string]any{
+				"message": reqErr.ErrMsg,
+				"data":    reqErr.Response,
+				"success": false,
+			})
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]any{"data": "", "message": "Something went wrong", "success": false})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"data": data["data"], "message": "", "success": true})
 }
