@@ -12,16 +12,16 @@ import (
 var database *gorm.DB
 var e error
 
-func DatabaseInit(cfn *config.Config) {
-
+func init() {
+	config.C()
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
-		cfn.DataBase.Host,
-		cfn.DataBase.Username,
-		cfn.DataBase.Password,
-		cfn.DataBase.Schema,
-		cfn.DataBase.Port,
-		cfn.DataBase.SSLMode,
-		cfn.DataBase.TimeZone,
+		config.C().DataBase.Host,
+		config.C().DataBase.Username,
+		config.C().DataBase.Password,
+		config.C().DataBase.Schema,
+		config.C().DataBase.Port,
+		config.C().DataBase.SSLMode,
+		config.C().DataBase.TimeZone,
 	)
 
 	database, e = gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -30,15 +30,21 @@ func DatabaseInit(cfn *config.Config) {
 		log.Fatal("failed to connect db")
 	}
 
-	database.AutoMigrate(
+	migrateModels()
+}
+
+func migrateModels() {
+	err := database.AutoMigrate(
 		&model.Wallet{},
 		&model.ExchangeRate{},
 		&model.Variant{},
 		&model.Product{},
 		&model.Order{},
 	)
+	if err != nil {
+		log.Fatalf("failed to migrate model")
+	}
 }
-
 func DB() *gorm.DB {
 	return database
 }

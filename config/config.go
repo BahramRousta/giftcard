@@ -1,9 +1,13 @@
 package config
 
 import (
-	"fmt"
 	"github.com/spf13/viper"
 	"os"
+)
+
+var (
+	// Global config
+	confs = Config{}
 )
 
 type Config struct {
@@ -12,21 +16,25 @@ type Config struct {
 	Redis    Redis    `mapstructure:"redis"`
 }
 
-func LoadConfig() (*Config, error) {
+func init() {
+	dir, _ := os.Getwd()
 
-	var config *Config
-
-	dir, err := os.Getwd()
 	viper.AddConfigPath(dir)
-
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
-	err = viper.ReadInConfig()
-	if err != nil {
-		return nil, fmt.Errorf("could not read config file: %v", err)
+	if err := viper.ReadInConfig(); err != nil {
+		panic(err)
 	}
+	loadConfigs()
+}
 
-	err = viper.Unmarshal(&config)
-	return config, nil
+func loadConfigs() {
+	if err := viper.Unmarshal(&confs); err != nil {
+		panic(err)
+	}
+}
+
+func C() *Config {
+	return &confs
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"giftCard/config"
 	"giftCard/internal/adaptor/gft_error"
-	"github.com/rs/zerolog/log"
 	"io"
 	"net/http"
 )
@@ -18,15 +17,10 @@ type GiftCard struct {
 }
 
 func NewGiftCard() *GiftCard {
-	config, err := config.LoadConfig()
-	if err != nil {
-		log.Fatal().Err(err).Msg("cannot load config")
-	}
-
 	return &GiftCard{
-		BaseUrl:      config.Service.BaseUrl,
-		ClientID:     config.Service.ClientID,
-		ClientSecret: config.Service.ClientSecret,
+		BaseUrl:      config.C().Service.BaseUrl,
+		ClientID:     config.C().Service.ClientID,
+		ClientSecret: config.C().Service.ClientSecret,
 	}
 }
 

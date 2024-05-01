@@ -3,31 +3,21 @@ package main
 import (
 	"giftCard/cmd/api"
 	"giftCard/cmd/server"
-	"giftCard/config"
 	"giftCard/internal/adaptor/db"
-	"giftCard/internal/adaptor/redis"
 	"giftCard/internal/repository"
 	"giftCard/internal/service"
 )
 
 func main() {
 	server := server.NewServer()
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		panic(err)
-	}
 
-	db.DatabaseInit(cfg)
 	gorm := db.DB()
 
 	dbGorm, err := gorm.DB()
 	if err != nil {
 		panic(err)
 	}
-
 	dbGorm.Ping()
-
-	redis.RedisInit(cfg)
 
 	walletRepo := repository.NewWalletRepository(gorm)
 	exchangeRepo := repository.NewExchangeRepository(gorm)
