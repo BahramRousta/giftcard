@@ -5,7 +5,6 @@ import (
 	"giftCard/config"
 	"github.com/gomodule/redigo/redis"
 	"log"
-	"os"
 	"time"
 )
 
@@ -19,8 +18,7 @@ func RedisInit(cnf *config.Config) {
 		Dial: func() (redis.Conn, error) {
 			conn, err := redis.Dial("tcp", fmt.Sprintf("%s:%s", cnf.Redis.Host, cnf.Redis.Port))
 			if err != nil {
-				log.Printf("ERROR: fail init redis: %s", err.Error())
-				os.Exit(1)
+				log.Fatalf("ERROR: fail init redis: %s", err.Error())
 			}
 			return conn, err
 		},

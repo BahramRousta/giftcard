@@ -6,6 +6,7 @@ import (
 	"giftCard/internal/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"log"
 )
 
 var database *gorm.DB
@@ -25,6 +26,10 @@ func DatabaseInit(cfn *config.Config) {
 
 	database, e = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
+	if e != nil {
+		log.Fatal("failed to connect db")
+	}
+
 	database.AutoMigrate(
 		&model.Wallet{},
 		&model.ExchangeRate{},
@@ -32,10 +37,6 @@ func DatabaseInit(cfn *config.Config) {
 		&model.Product{},
 		&model.Order{},
 	)
-
-	if e != nil {
-		panic(e)
-	}
 }
 
 func DB() *gorm.DB {
