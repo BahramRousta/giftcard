@@ -44,7 +44,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 				"success": false,
 			})
 		}
-		return echo.NewHTTPError(http.StatusInternalServerError, map[string]any{"data": "", "message": "something went wrong", "success": false})
+		return c.JSON(http.StatusInternalServerError, map[string]any{"data": "", "message": "something went wrong", "success": false})
 	}
 	return c.JSON(http.StatusOK, map[string]any{"data": data.Data, "message": "", "success": true})
 }
