@@ -1,7 +1,6 @@
-package adaptor
+package giftcard
 
 import (
-	gftErr "giftCard/internal/adaptor/gft_error"
 	rds "giftCard/internal/adaptor/redis"
 	"github.com/gomodule/redigo/redis"
 	"net/http"
@@ -38,7 +37,7 @@ func (g *GiftCard) Auth() (string, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusForbidden {
-		return "", &gftErr.ForbiddenErr{ErrMsg: "Forbidden to access end point."}
+		return "", &ForbiddenErr{ErrMsg: "Forbidden to access end point."}
 	}
 
 	if res.StatusCode == http.StatusOK {
@@ -46,5 +45,5 @@ func (g *GiftCard) Auth() (string, error) {
 		conn.Do("SET", "giftcard_token", authHeader, "EX", 3600)
 		return authHeader, nil
 	}
-	return "", &gftErr.AuthErr{ErrMsg: "Authentication Failed"}
+	return "", &AuthErr{ErrMsg: "Authentication Failed"}
 }
