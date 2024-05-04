@@ -1,7 +1,7 @@
 package main
 
-import "giftCard/app"
+import "giftCard/cmd"
 
 func main() {
-	app.Start()
+	cmd.Execute()
 }
