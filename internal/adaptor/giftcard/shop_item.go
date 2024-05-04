@@ -1,4 +1,4 @@
-package adaptor
+package giftcard
 
 import (
 	"encoding/json"

@@ -1,19 +1,18 @@
-package adaptor
+package giftcard
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"giftCard/config"
-	"giftCard/internal/adaptor/gft_error"
 	"io"
 	"net/http"
 )
 
 type GiftCard struct {
-	BaseUrl      string
-	ClientID     string
-	ClientSecret string
+	BaseUrl      string `json:"baseUrl"`
+	ClientID     string `json:"clientID"`
+	ClientSecret string `json:"clientSecret"`
 }
 
 func NewGiftCard() *GiftCard {
@@ -37,7 +36,7 @@ func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (m
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", token)
+	req.Header.Add("Authorization", token.Token)
 
 	if payload != nil {
 		req.Body = io.NopCloser(bytes.NewBuffer(*payload))
@@ -55,18 +54,18 @@ func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (m
 	}
 
 	if res.StatusCode == http.StatusForbidden {
-		return nil, &adaptor.ForbiddenErr{ErrMsg: "Forbidden to access end point."}
+		return nil, &ForbiddenErr{ErrMsg: "Forbidden to access end point."}
 	}
 
 	var responseData map[string]any
 
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		return nil, errors.New("error while process response 1")
+		return nil, errors.New("error while unmarshal response body")
 	}
 
 	if res.StatusCode == http.StatusOK {
 		return responseData, nil
 	}
-	return responseData, &adaptor.RequestErr{ErrMsg: "error from provider", Response: responseData}
+	return responseData, &RequestErr{ErrMsg: "error from provider", Response: responseData}
 }
