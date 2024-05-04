@@ -10,18 +10,20 @@ import (
 )
 
 type giftCardOrderUseCase struct {
-	gf   *giftcard.GiftCard
-	repo *repository.OrderRepository
+	repo repository.IOrderRepository
+	gf   giftcard.IGiftCard
 }
 
 type GiftCardOrderUseCaseParams struct {
 	fx.In
-	Gf *giftcard.GiftCard
+	Repo repository.IOrderRepository
+	Gf   *giftcard.GiftCard
 }
 
 func NewOrderUseCase(params GiftCardOrderUseCaseParams) IOrderUseCase {
 	return &giftCardOrderUseCase{
-		gf: params.Gf,
+		repo: params.Repo,
+		gf:   params.Gf,
 	}
 }
 
@@ -70,7 +72,10 @@ func (us giftCardOrderUseCase) CreateOrder(productList []map[string]any) (giftca
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	us.repo.InsertOrder(order)
+	err = us.repo.InsertOrder(order)
+	if err != nil {
+		return giftcard.OrderResponse{}, err
+	}
 	return data, nil
 }
 func (us giftCardOrderUseCase) ConfirmOrder(orderId string) (map[string]any, error) {
