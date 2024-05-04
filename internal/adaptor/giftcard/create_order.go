@@ -70,8 +70,6 @@ func (g *GiftCard) CreateOrder(productList []map[string]any) (OrderResponse, err
 	payload := map[string]any{
 		"productList": productList,
 		"wallet":      "EUR",
-		"reference":   "Test Reference",
-		"webhookUrl":  "YOUR WEBHOOK URL",
 	}
 
 	payloadBytes, err := json.Marshal(payload)
