@@ -7,8 +7,8 @@ import (
 	"go.uber.org/fx"
 )
 
-var Module = fx.Options(
+var Module = fx.Module("order",
 	fx.Provide(usecase.NewOrderUseCase),
-	fx.Provide(repository.NewOrderRepository),
 	fx.Provide(delivery.NewOrderHandler),
+	fx.Provide(repository.NewOrderRepository),
 )
