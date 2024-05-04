@@ -64,11 +64,6 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 	})
 }
 
-type RequestParams struct {
-	PageSize  int    `json:"pageSize" form:"pageSize" validate:"omitempty,min=5,max=50"`
-	PageToken string `json:"pageToken"`
-}
-
 func (h *ShopHandler) ShopList(c echo.Context) error {
 
 	pageSizeHeader := c.Request().Header.Get("PageSize")
@@ -83,9 +78,9 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	}
 
 	validate := validator.New()
-	if err := validate.Var(pageSize, "required,min=5,max=50"); err != nil {
+	if err := validate.Var(pageSize, "min=5,max=50"); err != nil {
 		return c.JSON(http.StatusBadRequest, responser.Response{
-			Message: fmt.Sprintf("Validation error: %s", err.Error()),
+			Message: fmt.Sprintf("page size must between 5 to 50."),
 			Success: false,
 			Data:    "",
 		})
