@@ -5,6 +5,7 @@ import (
 	"fmt"
 	gftErr "giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/modules/shop/usecase"
+	"giftCard/pkg/responser"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
@@ -36,24 +37,31 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
-			return c.JSON(http.StatusForbidden, map[string]any{
-				"message": forbiddenErr.ErrMsg,
-				"data":    "",
-				"success": false,
+			return c.JSON(http.StatusForbidden, responser.Response{
+				Message: forbiddenErr.ErrMsg,
+				Data:    "",
+				Success: false,
 			})
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
-			return c.JSON(http.StatusBadRequest, map[string]any{
-				"message": reqErr.ErrMsg,
-				"data":    reqErr.Response,
-				"success": false,
+			return c.JSON(http.StatusBadRequest, responser.Response{
+				Message: reqErr.ErrMsg,
+				Data:    reqErr.Response,
+				Success: false,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]any{"data": "", "message": err.Error(), "success": false})
-
+		return c.JSON(http.StatusInternalServerError, responser.Response{
+			Message: "something went wrong",
+			Data:    "",
+			Success: false,
+		})
 	}
-	return c.JSON(http.StatusOK, map[string]any{"data": data, "message": "", "success": true})
+	return c.JSON(http.StatusOK, responser.Response{
+		Message: "",
+		Data:    data.Data,
+		Success: true,
+	})
 }
 
 type RequestParams struct {
@@ -67,20 +75,19 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	pageSize, err := strconv.Atoi(pageSizeHeader)
 
 	if err != nil {
-		c.Logger().Error("Error in page size", err)
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": "pageSize must be an integer",
-			"success": false,
-			"data":    map[string]interface{}{},
+		return c.JSON(http.StatusBadRequest, responser.Response{
+			Message: "pageSize must be an integer",
+			Success: false,
+			Data:    "",
 		})
 	}
 
 	validate := validator.New()
 	if err := validate.Var(pageSize, "required,min=5,max=50"); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": fmt.Sprintf("Validation error: %s", err.Error()),
-			"success": false,
-			"data":    map[string]interface{}{},
+		return c.JSON(http.StatusBadRequest, responser.Response{
+			Message: fmt.Sprintf("Validation error: %s", err.Error()),
+			Success: false,
+			Data:    "",
 		})
 	}
 
@@ -90,21 +97,25 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
-			return c.JSON(http.StatusForbidden, map[string]any{
-				"message": forbiddenErr.ErrMsg,
-				"data":    "",
-				"success": false,
+			return c.JSON(http.StatusForbidden, responser.Response{
+				Message: forbiddenErr.ErrMsg,
+				Data:    "",
+				Success: false,
 			})
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
-			return c.JSON(http.StatusBadRequest, map[string]any{
-				"message": reqErr.ErrMsg,
-				"data":    reqErr.Response,
-				"success": false,
+			return c.JSON(http.StatusBadRequest, responser.Response{
+				Message: reqErr.ErrMsg,
+				Data:    reqErr.Response,
+				Success: false,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]any{"data": "", "message": "Something went wrong", "success": false})
+		return c.JSON(http.StatusInternalServerError, responser.Response{
+			Data:    "",
+			Message: "Something went wrong",
+			Success: false,
+		})
 	}
-	return c.JSON(http.StatusOK, map[string]any{"data": data["data"], "message": "", "success": true})
+	return c.JSON(http.StatusOK, responser.Response{Data: data["data"], Message: "", Success: true})
 }

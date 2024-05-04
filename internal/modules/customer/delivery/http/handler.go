@@ -4,6 +4,7 @@ import (
 	"errors"
 	gftErr "giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/modules/customer/usecase"
+	"giftCard/pkg/responser"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
 	"net/http"
@@ -30,10 +31,10 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
-			return c.JSON(http.StatusForbidden, map[string]any{
-				"message": forbiddenErr.ErrMsg,
-				"data":    "",
-				"success": false,
+			return c.JSON(http.StatusForbidden, responser.Response{
+				Message: forbiddenErr.ErrMsg,
+				Data:    "",
+				Success: false,
 			})
 		}
 		var reqErr *gftErr.RequestErr
@@ -44,7 +45,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 				"success": false,
 			})
 		}
-		return c.JSON(http.StatusInternalServerError, map[string]any{"data": "", "message": "something went wrong", "success": false})
+		return c.JSON(http.StatusInternalServerError, responser.Response{Message: "Something went wrong", Data: "", Success: false})
 	}
-	return c.JSON(http.StatusOK, map[string]any{"data": data.Data, "message": "", "success": true})
+	return c.JSON(http.StatusOK, responser.Response{Message: "", Success: true, Data: data.Data})
 }

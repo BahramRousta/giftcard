@@ -36,7 +36,7 @@ func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (m
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", token)
+	req.Header.Add("Authorization", token.Token)
 
 	if payload != nil {
 		req.Body = io.NopCloser(bytes.NewBuffer(*payload))
@@ -61,7 +61,7 @@ func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (m
 
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		return nil, errors.New("error while process response 1")
+		return nil, errors.New("error while unmarshal response body")
 	}
 
 	if res.StatusCode == http.StatusOK {
