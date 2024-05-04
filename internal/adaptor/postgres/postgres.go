@@ -23,24 +23,21 @@ func init() {
 		config.C().DataBase.SSLMode,
 		config.C().DataBase.TimeZone,
 	)
-
 	database, e = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-
 	if e != nil {
 		log.Fatal("failed to connect postgres")
 	}
-
-	migrateModels()
 }
 
-func migrateModels() {
+func MigrateModels() error {
 	err := database.AutoMigrate(
 		&model2.Wallet{},
 		&model2.Order{},
 	)
 	if err != nil {
-		log.Fatalf("failed to migrate model")
+		return fmt.Errorf("failed to migrate model, %w", err)
 	}
+	return nil
 }
 func DB() *gorm.DB {
 	return database
