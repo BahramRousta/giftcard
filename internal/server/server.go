@@ -60,7 +60,7 @@ func (s *Server) SetUpServer(container DeliveryContainer) {
 	v1 := s.srv.Group("/v1")
 	routes.MapShopHandler(v1, container.ShopHandler)
 	routes.MapCustomerHandler(v1, container.CustomerHandler)
-	routes.MapOrderHandler(v1, *container.OrderHandler)
+	routes.MapOrderHandler(v1, container.OrderHandler)
 
 	s.srv.GET("/health", func(c echo.Context) error {
 		return c.String(200, fmt.Sprintf("Hi :)) i'm in healthy"))
