@@ -1,7 +1,10 @@
 package usecase
 
-import "giftCard/internal/adaptor/giftcard"
+import (
+	"context"
+	"giftCard/internal/adaptor/giftcard"
+)
 
 type ICustomerUseCase interface {
-	GetCustomerInfoService() (giftcard.CustomerInfoResponse, error)
+	GetCustomerInfoUseCase(ctx context.Context) (giftcard.CustomerInfoResponse, error)
 }

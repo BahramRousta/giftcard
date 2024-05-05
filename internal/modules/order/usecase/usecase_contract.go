@@ -1,9 +1,12 @@
 package usecase
 
-import "giftCard/internal/adaptor/giftcard"
+import (
+	"context"
+	"giftCard/internal/adaptor/giftcard"
+)
 
 type IOrderUseCase interface {
-	GetOrderStatus(orderId string) (map[string]any, error)
-	CreateOrder(productList []map[string]any) (giftcard.OrderResponse, error)
-	ConfirmOrder(orderId string) (map[string]any, error)
+	GetOrderStatus(ctx context.Context, orderId string) (map[string]any, error)
+	CreateOrder(ctx context.Context, productList []map[string]any) (giftcard.OrderResponse, error)
+	ConfirmOrder(ctx context.Context, orderId string) (map[string]any, error)
 }

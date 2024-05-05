@@ -1,8 +1,11 @@
 package usecase
 
-import "giftCard/internal/adaptor/giftcard"
+import (
+	"context"
+	"giftCard/internal/adaptor/giftcard"
+)
 
 type IShopUseCase interface {
-	GetShopList(pageSize int, pageToken string) (map[string]any, error)
-	GetShopItem(productId string) (giftcard.ProductResponse, error)
+	GetShopList(ctx context.Context, pageSize int, pageToken string) (map[string]any, error)
+	GetShopItem(ctx context.Context, productId string) (giftcard.ProductResponse, error)
 }

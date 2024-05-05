@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/modules/customer/repository"
 	"giftCard/model"
@@ -25,9 +26,9 @@ func NewCustomerUseCase(param CustomerUseCaseParam) *CustomerUseCase {
 	}
 }
 
-func (us CustomerUseCase) GetCustomerInfoService() (giftcard.CustomerInfoResponse, error) {
+func (us CustomerUseCase) GetCustomerInfoUseCase(ctx context.Context) (giftcard.CustomerInfoResponse, error) {
 
-	data, err := us.gf.CustomerInfo()
+	data, err := us.gf.CustomerInfo(ctx)
 	if err != nil {
 		return giftcard.CustomerInfoResponse{}, err
 	}

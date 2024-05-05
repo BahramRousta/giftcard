@@ -1,6 +1,7 @@
 package giftcard
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -37,11 +38,11 @@ type ProductResponse struct {
 	} `json:"data"`
 }
 
-func (g *GiftCard) ShopItem(productId string) (ProductResponse, error) {
+func (g *GiftCard) ShopItem(ctx context.Context, productId string) (ProductResponse, error) {
 	url := g.BaseUrl + fmt.Sprintf("/shop/products/%s", productId)
 	method := "GET"
 
-	data, err := g.ProcessRequest(method, url, nil)
+	data, err := g.ProcessRequest(ctx, method, url, nil)
 	jsonData, err := json.Marshal(data)
 
 	var responseData ProductResponse

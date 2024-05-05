@@ -1,10 +1,11 @@
 package giftcard
 
 import (
+	"context"
 	"encoding/json"
 )
 
-func (g *GiftCard) ConfirmOrder(orderId string) (map[string]any, error) {
+func (g *GiftCard) ConfirmOrder(ctx context.Context, orderId string) (map[string]any, error) {
 	url := g.BaseUrl + "/order/confirm"
 	method := "PUT"
 
@@ -17,7 +18,7 @@ func (g *GiftCard) ConfirmOrder(orderId string) (map[string]any, error) {
 		return nil, err
 	}
 
-	data, err := g.ProcessRequest(method, url, &payloadBytes)
+	data, err := g.ProcessRequest(ctx, method, url, &payloadBytes)
 
 	if err != nil {
 		return nil, err

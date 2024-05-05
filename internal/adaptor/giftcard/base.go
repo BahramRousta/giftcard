@@ -2,9 +2,11 @@ package giftcard
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"giftCard/config"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 )
@@ -13,24 +15,29 @@ type GiftCard struct {
 	BaseUrl      string `json:"baseUrl"`
 	ClientID     string `json:"clientID"`
 	ClientSecret string `json:"clientSecret"`
+	Logger       *zap.Logger
 }
 
-func NewGiftCard() *GiftCard {
+func NewGiftCard(logger *zap.Logger) *GiftCard {
 	return &GiftCard{
 		BaseUrl:      config.C().Service.BaseUrl,
 		ClientID:     config.C().Service.ClientID,
 		ClientSecret: config.C().Service.ClientSecret,
+		Logger:       logger,
 	}
 }
 
-func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (map[string]any, error) {
+func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string, payload *[]byte) (map[string]any, error) {
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := g.Auth()
+	token, err := g.Auth(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -42,6 +49,17 @@ func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (m
 		req.Body = io.NopCloser(bytes.NewBuffer(*payload))
 	}
 
+	logger := g.Logger.With(
+		zap.String("tracer", uniqueID),
+	)
+	logger.Info("attempting authentication request",
+		zap.String("url", g.BaseUrl+"/auth/jwt"),
+		zap.String("method", "GET"),
+		zap.Any("body", req.Body),
+		zap.Any("headers", req.Header),
+		zap.Any("params", req.URL.Query()),
+	)
+
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, errors.New("error while sending request")
@@ -52,6 +70,12 @@ func (g *GiftCard) ProcessRequest(method string, url string, payload *[]byte) (m
 	if err != nil {
 		return nil, errors.New("error while process response")
 	}
+
+	logger.Info("response from provider",
+		zap.Int("status_code", res.StatusCode),
+		zap.Any("headers", res.Header),
+		zap.Any("body", res.Body),
+	)
 
 	if res.StatusCode == http.StatusForbidden {
 		return nil, &ForbiddenErr{ErrMsg: "Forbidden to access end point."}

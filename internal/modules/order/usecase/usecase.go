@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
 	"giftCard/internal/adaptor/giftcard"
 	"giftCard/internal/modules/order/repository"
@@ -27,7 +28,7 @@ func NewOrderUseCase(params GiftCardOrderUseCaseParams) IOrderUseCase {
 	}
 }
 
-func (us giftCardOrderUseCase) GetOrderStatus(orderId string) (map[string]any, error) {
+func (us giftCardOrderUseCase) GetOrderStatus(ctx context.Context, orderId string) (map[string]any, error) {
 	order, err := us.repo.GetOrder(orderId)
 	if err != nil {
 		return nil, err
@@ -36,7 +37,7 @@ func (us giftCardOrderUseCase) GetOrderStatus(orderId string) (map[string]any, e
 		return nil, fmt.Errorf("order with ID %s not found", orderId)
 	}
 
-	data, err := us.gf.RetrieveOrder(orderId)
+	data, err := us.gf.RetrieveOrder(ctx, orderId)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +57,8 @@ func (us giftCardOrderUseCase) GetOrderStatus(orderId string) (map[string]any, e
 
 	return data, nil
 }
-func (us giftCardOrderUseCase) CreateOrder(productList []map[string]any) (giftcard.OrderResponse, error) {
-	data, err := us.gf.CreateOrder(productList)
+func (us giftCardOrderUseCase) CreateOrder(ctx context.Context, productList []map[string]any) (giftcard.OrderResponse, error) {
+	data, err := us.gf.CreateOrder(ctx, productList)
 	if err != nil {
 		return giftcard.OrderResponse{}, err
 	}
@@ -78,13 +79,13 @@ func (us giftCardOrderUseCase) CreateOrder(productList []map[string]any) (giftca
 	}
 	return data, nil
 }
-func (us giftCardOrderUseCase) ConfirmOrder(orderId string) (map[string]any, error) {
+func (us giftCardOrderUseCase) ConfirmOrder(ctx context.Context, orderId string) (map[string]any, error) {
 	order, err := us.repo.GetOrder(orderId)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := us.gf.ConfirmOrder(orderId)
+	data, err := us.gf.ConfirmOrder(ctx, orderId)
 
 	if err != nil {
 		return nil, err
