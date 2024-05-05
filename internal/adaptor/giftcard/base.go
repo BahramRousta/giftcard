@@ -52,9 +52,9 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 	logger := g.Logger.With(
 		zap.String("tracer", uniqueID),
 	)
-	logger.Info("attempting authentication request",
-		zap.String("url", g.BaseUrl+"/auth/jwt"),
-		zap.String("method", "GET"),
+	logger.Info("request to provider",
+		zap.String("url", url),
+		zap.String("method", method),
 		zap.Any("body", req.Body),
 		zap.Any("headers", req.Header),
 		zap.Any("params", req.URL.Query()),
