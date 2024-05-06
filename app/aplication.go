@@ -29,6 +29,7 @@ func Start() {
 		shopModule.Module,
 		fx.Provide(giftcard.NewGiftCard),
 		fx.Provide(server.NewServer),
+		fx.Provide(config.NewLogger),
 		fx.Invoke(serve),
 	)
 

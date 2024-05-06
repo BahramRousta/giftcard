@@ -1,15 +1,16 @@
 package giftcard
 
 import (
+	"context"
 	"fmt"
 )
 
 // RetrieveOrder use to get latest status of order
-func (g *GiftCard) RetrieveOrder(orderId string) (map[string]any, error) {
+func (g *GiftCard) RetrieveOrder(ctx context.Context, orderId string) (map[string]any, error) {
 	url := g.BaseUrl + fmt.Sprintf("/order/get?orderId=%s", orderId)
 	method := "GET"
 
-	data, err := g.ProcessRequest(method, url, nil)
+	data, err := g.ProcessRequest(ctx, method, url, nil)
 	if err != nil {
 		return nil, err
 	}

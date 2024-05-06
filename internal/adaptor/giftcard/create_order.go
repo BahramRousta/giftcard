@@ -1,6 +1,7 @@
 package giftcard
 
 import (
+	"context"
 	"encoding/json"
 )
 
@@ -63,7 +64,7 @@ type OrderResponse struct {
 	} `json:"data"`
 }
 
-func (g *GiftCard) CreateOrder(productList []map[string]any) (OrderResponse, error) {
+func (g *GiftCard) CreateOrder(ctx context.Context, productList []map[string]any) (OrderResponse, error) {
 	url := g.BaseUrl + "/order/create"
 	method := "POST"
 
@@ -77,7 +78,7 @@ func (g *GiftCard) CreateOrder(productList []map[string]any) (OrderResponse, err
 		return OrderResponse{}, err
 	}
 
-	data, err := g.ProcessRequest(method, url, &payloadBytes)
+	data, err := g.ProcessRequest(ctx, method, url, &payloadBytes)
 	if err != nil {
 		return OrderResponse{}, err
 	}

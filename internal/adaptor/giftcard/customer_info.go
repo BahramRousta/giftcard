@@ -1,6 +1,7 @@
 package giftcard
 
 import (
+	"context"
 	"encoding/json"
 )
 
@@ -30,11 +31,11 @@ type CustomerInfoResponse struct {
 	} `json:"data"`
 }
 
-func (g *GiftCard) CustomerInfo() (CustomerInfoResponse, error) {
+func (g *GiftCard) CustomerInfo(ctx context.Context) (CustomerInfoResponse, error) {
 	url := g.BaseUrl + "/customer/info"
 	method := "GET"
 
-	data, err := g.ProcessRequest(method, url, nil)
+	data, err := g.ProcessRequest(ctx, method, url, nil)
 	if err != nil {
 		return CustomerInfoResponse{}, err
 	}

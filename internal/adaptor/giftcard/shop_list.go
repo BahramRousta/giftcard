@@ -1,14 +1,15 @@
 package giftcard
 
 import (
+	"context"
 	"fmt"
 )
 
-func (g *GiftCard) ShopList(pageSize int, pageToken string) (map[string]any, error) {
+func (g *GiftCard) ShopList(ctx context.Context, pageSize int, pageToken string) (map[string]any, error) {
 	url := fmt.Sprintf("%s/shop/products?pageSize=%d&pageToken=%s", g.BaseUrl, pageSize, pageToken)
 	method := "GET"
 
-	data, err := g.ProcessRequest(method, url, nil)
+	data, err := g.ProcessRequest(ctx, method, url, nil)
 	if err != nil {
 		return nil, err
 	}
