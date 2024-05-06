@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"giftCard/model"
+	"giftcard/model"
 	"go.uber.org/fx"
 	"gorm.io/gorm"
 )

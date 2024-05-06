@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"giftCard/app"
+	"giftcard/app"
 	"github.com/spf13/cobra"
 	"os"
 )

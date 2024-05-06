@@ -14,6 +14,9 @@ type Config struct {
 	Service  GiftCard `mapstructure:"service"`
 	DataBase Postgres `mapstructure:"postgres"`
 	Redis    Redis    `mapstructure:"redis"`
+	Jaeger   tracer   `yaml:"jaeger"`
+	Logstash Logstash `yaml:"logstash"`
+	//Debug    bool   `mapstructure:"debug"`
 }
 
 func init() {

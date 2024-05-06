@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	gftErr "giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/modules/shop/usecase"
-	"giftCard/pkg/responser"
+	gftErr "giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/modules/shop/usecase"
+	"giftcard/pkg/responser"
+	"giftcard/pkg/utils"
 	"github.com/go-playground/validator"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"net/http"
@@ -17,23 +20,29 @@ import (
 )
 
 type ShopHandler struct {
-	us     usecase.IShopUseCase
-	Logger *zap.Logger
+	us usecase.IShopUseCase
+	//Logger *zap.Logger
 }
 type ShopHandlerParams struct {
 	fx.In
-	Us     usecase.IShopUseCase
-	Logger *zap.Logger
+	Us usecase.IShopUseCase
+	//Logger *zap.Logger
 }
 
 func NewShopHandler(params ShopHandlerParams) *ShopHandler {
 	return &ShopHandler{
-		us:     params.Us,
-		Logger: params.Logger,
+		us: params.Us,
+		//Logger: params.Logger,
 	}
 }
 
 func (h *ShopHandler) ShopItem(c echo.Context) error {
+	span, spannedContext := trace.T.SpanFromContext(
+		utils.GetRequestCtx(c),
+		"CustomerInfo[CustomerDelivery]",
+		"delivery")
+	defer span.End()
+
 	productId := c.QueryParam("productId")
 	if productId == "" {
 		return c.String(http.StatusBadRequest, "productId is required")
@@ -41,7 +50,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 
 	uniqueID := uuid.New().String()
 
-	logger := h.Logger.With(
+	logger := zap.L().With(
 		zap.String("tracer", uniqueID),
 	)
 	logger.Info("shop item request",
@@ -52,7 +61,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		zap.Any("header", c.Request().Header),
 	)
 
-	ctx := context.WithValue(c.Request().Context(), "tracer", uniqueID)
+	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 
 	data, err := h.us.GetShopItem(ctx, productId)
 	if err != nil {
@@ -91,6 +100,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 	logger.Info("shop item response",
 		zap.Any("data", data.Data),
 	)
+	span.SetAttributes(attribute.String("response", ""))
 	return c.JSON(http.StatusOK, responser.Response{
 		Message: "",
 		Data:    data.Data,
@@ -124,7 +134,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	uniqueID := uuid.New().String()
 	ctx := context.WithValue(c.Request().Context(), "tracer", uniqueID)
 
-	logger := h.Logger.With(
+	logger := zap.L().With(
 		zap.String("tracer", uniqueID),
 	)
 	logger.Info("shop list request",

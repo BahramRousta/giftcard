@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	gftErr "giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/modules/order/usecase"
-	"giftCard/pkg/responser"
+	gftErr "giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/modules/order/usecase"
+	"giftcard/pkg/responser"
 	"github.com/go-playground/validator"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -43,14 +43,14 @@ type OrderHandler struct {
 
 type OrderHandlerParams struct {
 	fx.In
-	Us     usecase.IOrderUseCase
-	Logger *zap.Logger
+	Us usecase.IOrderUseCase
+	//Logger *zap.Logger
 }
 
 func NewOrderHandler(params OrderHandlerParams) *OrderHandler {
 	return &OrderHandler{
-		us:     params.Us,
-		Logger: params.Logger,
+		us: params.Us,
+		//Logger: params.Logger,
 	}
 }
 
@@ -71,7 +71,7 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 
 	uniqueID := uuid.New().String()
 
-	logger := h.Logger.With(zap.String("tracer", uniqueID))
+	logger := zap.L().With(zap.String("tracer", uniqueID))
 	logger.Info("confirm order",
 		zap.Any("request_body", requestBody),
 		zap.String("user_ip", c.RealIP()),
@@ -185,7 +185,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	data, err := h.us.CreateOrder(ctx, productList)
 
-	logger := h.Logger.With(zap.String("tracer", uniqueID))
+	logger := zap.L().With(zap.String("tracer", uniqueID))
 	logger.Info("create order",
 		zap.Any("request_body", requestBody),
 		zap.String("user_ip", c.RealIP()),
@@ -252,7 +252,7 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 	queryParams := c.QueryParams()
 	uniqueID := uuid.New().String()
 
-	logger := h.Logger.With(zap.String("tracer", uniqueID))
+	logger := zap.L().With(zap.String("tracer", uniqueID))
 	logger.Info("get order status",
 		zap.String("user_ip", c.RealIP()),
 		zap.String("uri", c.Path()),

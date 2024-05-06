@@ -3,6 +3,8 @@ package giftcard
 import (
 	"context"
 	"encoding/json"
+	"giftcard/internal/adaptor/trace"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type ExchangeRate struct {
@@ -32,24 +34,30 @@ type CustomerInfoResponse struct {
 }
 
 func (g *GiftCard) CustomerInfo(ctx context.Context) (CustomerInfoResponse, error) {
+	span, spannedContext := trace.T.SpanFromContext(
+		ctx,
+		"giftCardAdapter",
+		"adapter")
+
+	defer span.End()
+
 	url := g.BaseUrl + "/customer/info"
 	method := "GET"
 
-	data, err := g.ProcessRequest(ctx, method, url, nil)
+	data, err := g.ProcessRequest(spannedContext, method, url, nil)
 	if err != nil {
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return CustomerInfoResponse{}, err
 	}
-	if err != nil {
-		return CustomerInfoResponse{}, err
-	}
-
 	jsonData, err := json.Marshal(data)
 
 	var responseData CustomerInfoResponse
 	err = json.Unmarshal(jsonData, &responseData)
 	if err != nil {
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return CustomerInfoResponse{}, err
 	}
+	span.SetAttributes(attribute.String("msg", "calling adapter passed"))
 	return responseData, nil
 }
 

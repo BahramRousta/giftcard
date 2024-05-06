@@ -3,9 +3,9 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/modules/order/repository"
-	"giftCard/model"
+	"giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/modules/order/repository"
+	"giftcard/model"
 	"go.uber.org/fx"
 	"time"
 )

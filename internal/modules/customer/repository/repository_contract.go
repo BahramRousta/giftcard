@@ -1,6 +1,6 @@
 package repository
 
-import "giftCard/model"
+import "giftcard/model"
 
 type IWalletRepository interface {
 	InsertWallet(wallet *model.Wallet) error

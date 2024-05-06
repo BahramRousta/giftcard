@@ -1,9 +1,9 @@
 package order
 
 import (
-	"giftCard/internal/modules/order/delivery/http"
-	"giftCard/internal/modules/order/repository"
-	"giftCard/internal/modules/order/usecase"
+	"giftcard/internal/modules/order/delivery/http"
+	"giftcard/internal/modules/order/repository"
+	"giftcard/internal/modules/order/usecase"
 	"go.uber.org/fx"
 )
 

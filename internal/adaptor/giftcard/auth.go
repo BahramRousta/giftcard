@@ -3,7 +3,7 @@ package giftcard
 import (
 	"context"
 	"errors"
-	rds "giftCard/internal/adaptor/redis"
+	rds "giftcard/internal/adaptor/redis"
 	"github.com/gomodule/redigo/redis"
 	"go.uber.org/zap"
 	"io"

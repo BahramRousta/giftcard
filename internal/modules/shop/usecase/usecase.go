@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"context"
-	"giftCard/internal/adaptor/giftcard"
+	"giftcard/internal/adaptor/giftcard"
 	"go.uber.org/fx"
 )
 

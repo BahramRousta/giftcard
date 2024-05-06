@@ -3,13 +3,16 @@ package app
 import (
 	"context"
 	"fmt"
-	"giftCard/config"
-	"giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/adaptor/postgres"
-	customerModule "giftCard/internal/modules/customer"
-	orderModule "giftCard/internal/modules/order"
-	shopModule "giftCard/internal/modules/shop"
-	"giftCard/internal/server"
+	"giftcard/config"
+	"giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/adaptor/logstash"
+	"giftcard/internal/adaptor/postgres"
+	"giftcard/internal/adaptor/trace"
+	customerModule "giftcard/internal/modules/customer"
+	orderModule "giftcard/internal/modules/order"
+	shopModule "giftcard/internal/modules/shop"
+	"giftcard/internal/server"
+	"giftcard/pkg/logger"
 	"go.uber.org/fx"
 	"log"
 	"os"
@@ -28,8 +31,11 @@ func Start() {
 		orderModule.Module,
 		shopModule.Module,
 		fx.Provide(giftcard.NewGiftCard),
+		//fx.Provide(config.NewLogger),
+		fx.Provide(logstash.NewLogStash),
+		fx.Invoke(trace.InitGlobalTracer),
+		fx.Invoke(logger.InitGlobalLogger),
 		fx.Provide(server.NewServer),
-		fx.Provide(config.NewLogger),
 		fx.Invoke(serve),
 	)
 

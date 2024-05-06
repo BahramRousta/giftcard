@@ -3,12 +3,17 @@ package delivery
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
-	gftErr "giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/modules/customer/usecase"
-	"giftCard/pkg/responser"
+	gftErr "giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/modules/customer/usecase"
+	"giftcard/pkg/responser"
+	"giftcard/pkg/utils"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/attribute"
+	_ "go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"io"
@@ -23,18 +28,24 @@ type CustomerInfoHandler struct {
 type CustomerInfoHandlerParams struct {
 	fx.In
 	CustomerUseCase *usecase.CustomerUseCase
-	Logger          *zap.Logger
+	//Logger          *zap.Logger
 }
 
 func NewCustomerInfoHandler(params CustomerInfoHandlerParams) *CustomerInfoHandler {
 	return &CustomerInfoHandler{
 		customerUseCase: params.CustomerUseCase,
-		Logger:          params.Logger,
+		//Logger:          params.Logger,
 	}
 }
 
 func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 
+	span, spannedContext := trace.T.SpanFromContext(
+		utils.GetRequestCtx(c),
+		"CustomerInfo[CustomerDelivery]",
+		"delivery")
+	defer span.End()
+	span.SetAttributes(attribute.String("msg", "start fetch customer info"))
 	requestBody := ""
 	if c.Request().Body != nil {
 		body, err := io.ReadAll(c.Request().Body)
@@ -46,10 +57,10 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 
 	uniqueID := uuid.New().String()
 
-	ctx := context.WithValue(c.Request().Context(), "tracer", uniqueID)
+	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 	data, err := h.customerUseCase.GetCustomerInfoUseCase(ctx)
 
-	logger := h.Logger.With(
+	logger := zap.L().With(
 		zap.String("tracer", uniqueID),
 	)
 	logger.Info("customer info request",
@@ -64,6 +75,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
 				Data:    "",
@@ -82,5 +94,13 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	}
 	logger.Info("customer info response",
 		zap.Any("data", data.Data))
+	dataJSON, err := json.Marshal(data.Data)
+	span.SetAttributes(attribute.String("data", string(dataJSON)))
+
+	span.SetAttributes(
+		attribute.String("msg", ""),
+		attribute.Bool("success", true),
+		attribute.String("data", string(dataJSON)), // Convert map to string
+	)
 	return c.JSON(http.StatusOK, responser.Response{Message: "", Success: true, Data: data.Data})
 }
