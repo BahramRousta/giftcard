@@ -30,6 +30,7 @@ func NewServer(p DeliveryContainer) IServer {
 
 func (s *Server) SetUpServer(container DeliveryContainer) {
 	s.srv.Use(middleware.Logger())
+	s.srv.Use(middleware.RequestID())
 	//s.srv.Use(middleware.BodyDump(func(c echo.Context, reqBody, resBody []byte) {
 	//	logFile, err := os.OpenFile("logs/server.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
 	//	if err != nil {

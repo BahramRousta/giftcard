@@ -10,7 +10,6 @@ import (
 	"giftcard/internal/modules/customer/usecase"
 	"giftcard/pkg/responser"
 	"giftcard/pkg/utils"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	_ "go.opentelemetry.io/otel/attribute"
@@ -22,19 +21,16 @@ import (
 
 type CustomerInfoHandler struct {
 	customerUseCase usecase.ICustomerUseCase
-	Logger          *zap.Logger
 }
 
 type CustomerInfoHandlerParams struct {
 	fx.In
 	CustomerUseCase *usecase.CustomerUseCase
-	//Logger          *zap.Logger
 }
 
 func NewCustomerInfoHandler(params CustomerInfoHandlerParams) *CustomerInfoHandler {
 	return &CustomerInfoHandler{
 		customerUseCase: params.CustomerUseCase,
-		//Logger:          params.Logger,
 	}
 }
 
@@ -45,7 +41,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		"CustomerInfo[CustomerDelivery]",
 		"delivery")
 	defer span.End()
-	span.SetAttributes(attribute.String("msg", "start fetch customer info"))
+
 	requestBody := ""
 	if c.Request().Body != nil {
 		body, err := io.ReadAll(c.Request().Body)
@@ -55,10 +51,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		}
 	}
 
-	uniqueID := uuid.New().String()
-
-	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
-	data, err := h.customerUseCase.GetCustomerInfoUseCase(ctx)
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
 
 	logger := zap.L().With(
 		zap.String("tracer", uniqueID),
@@ -71,6 +64,9 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		zap.String("host", c.Request().Host),
 		zap.Any("header", c.Request().Header),
 	)
+
+	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
+	data, err := h.customerUseCase.GetCustomerInfoUseCase(ctx)
 
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
@@ -92,15 +88,13 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		}
 		return c.JSON(http.StatusInternalServerError, responser.Response{Message: "Something went wrong", Data: "", Success: false})
 	}
-	logger.Info("customer info response",
-		zap.Any("data", data.Data))
-	dataJSON, err := json.Marshal(data.Data)
-	span.SetAttributes(attribute.String("data", string(dataJSON)))
 
+	//logger.Info("customer info response", zap.Any("data", data.Data))
+
+	dataJSON, err := json.Marshal(data.Data)
 	span.SetAttributes(
-		attribute.String("msg", ""),
-		attribute.Bool("success", true),
-		attribute.String("data", string(dataJSON)), // Convert map to string
+		attribute.String("message", "get customer info successfully passed."),
+		attribute.String("data", string(dataJSON)),
 	)
 	return c.JSON(http.StatusOK, responser.Response{Message: "", Success: true, Data: data.Data})
 }

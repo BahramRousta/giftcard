@@ -32,22 +32,30 @@ func NewGiftCard() *GiftCard {
 func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string, payload *[]byte) (map[string]any, error) {
 	span, spannedContext := trace.T.SpanFromContext(
 		ctx,
-		"processGiftCardRequest",
+		"ProcessGiftCardRequest",
 		"adapter")
 
 	defer span.End()
 
 	uniqueID, _ := ctx.Value("tracer").(string)
 
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
+		logger.Error("error while creating new request",
+			zap.String("err", err.Error()))
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
 
 	token, err := g.Auth(spannedContext)
 	if err != nil {
+		logger.Error("error while authentication to gift card provider",
+			zap.String("err", err.Error()))
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
@@ -59,9 +67,6 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		req.Body = io.NopCloser(bytes.NewBuffer(*payload))
 	}
 
-	logger := zap.L().With(
-		zap.String("tracer", uniqueID),
-	)
 	logger.Info("request to provider",
 		zap.String("url", url),
 		zap.String("method", method),
@@ -72,6 +77,8 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 
 	res, err := client.Do(req)
 	if err != nil {
+		logger.Error("error while sending request to gift card provider",
+			zap.String("err", err.Error()))
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, errors.New("error while sending request")
 	}
@@ -83,17 +90,6 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		return nil, errors.New("error while process response")
 	}
 
-	logger.Info("response from provider",
-		zap.Int("status_code", res.StatusCode),
-		zap.Any("headers", res.Header),
-		zap.Any("body", res.Body),
-	)
-
-	if res.StatusCode == http.StatusForbidden {
-		span.SetAttributes(attribute.String("error", "Forbidden to access end point."))
-		return nil, &ForbiddenErr{ErrMsg: "Forbidden to access end point."}
-	}
-
 	var responseData map[string]any
 
 	err = json.Unmarshal(bodyBytes, &responseData)
@@ -102,10 +98,27 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		return nil, errors.New("error while unmarshal response body")
 	}
 
+	logger.Info("response from gift card provider",
+		zap.Int("status_code", res.StatusCode),
+		zap.Any("headers", res.Header),
+		zap.Any("body", string(bodyBytes)),
+	)
+
+	if res.StatusCode == http.StatusForbidden {
+		logger.Error("error while sending request to gift card provider", zap.Int("status_code", http.StatusForbidden))
+		span.SetAttributes(attribute.String("error", "Forbidden to access end point."))
+		return responseData, &ForbiddenErr{ErrMsg: "Forbidden to access end point."}
+	}
+
 	if res.StatusCode == http.StatusOK {
-		span.SetAttributes(attribute.String("msg", "data get successfully"))
+		span.SetAttributes(attribute.String("data", string(bodyBytes)))
 		return responseData, nil
 	}
-	span.SetAttributes(attribute.String("error", "error from provider"))
-	return responseData, &RequestErr{ErrMsg: "error from provider", Response: responseData}
+
+	span.SetAttributes(attribute.String("error", "error from provider"),
+		attribute.String("error", string(bodyBytes)),
+		attribute.Int("status_code", res.StatusCode),
+	)
+
+	return responseData, &RequestErr{ErrMsg: "error from provider"}
 }

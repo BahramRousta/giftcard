@@ -2,11 +2,13 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"giftcard/internal/adaptor/giftcard"
 	"giftcard/internal/adaptor/trace"
 	"giftcard/internal/modules/customer/repository"
 	"giftcard/model"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 
 	//"giftcard/pkg/utils"
 	//"github.com/labstack/echo/v4"
@@ -35,15 +37,24 @@ func (us CustomerUseCase) GetCustomerInfoUseCase(ctx context.Context) (giftcard.
 	span, spannedContext := trace.T.SpanFromContext(
 		ctx,
 		"CustomerInfoUseCase",
-		"usecase")
-
+		"UseCase")
 	defer span.End()
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 
 	data, err := us.gf.CustomerInfo(spannedContext)
 	if err != nil {
+		logger.Error("error while processing gift card customer info",
+			zap.String("error", err.Error()),
+		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return giftcard.CustomerInfoResponse{}, err
 	}
+
 	currency := "EUR"
 	wallet := &model.Wallet{
 		Currency:      currency,
@@ -53,9 +64,14 @@ func (us CustomerUseCase) GetCustomerInfoUseCase(ctx context.Context) (giftcard.
 	}
 
 	if err := us.walletRepo.InsertWallet(wallet); err != nil {
+		logger.Error("error while inserting gift card customer info to db",
+			zap.String("error", err.Error()),
+		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return giftcard.CustomerInfoResponse{}, err
 	}
-	span.SetAttributes(attribute.String("msg", "usecase passed"))
+
+	jsonData, err := json.Marshal(data.Data)
+	span.SetAttributes(attribute.String("data from customer info use case layer", string(jsonData)))
 	return data, nil
 }

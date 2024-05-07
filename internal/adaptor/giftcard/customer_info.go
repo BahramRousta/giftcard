@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"giftcard/internal/adaptor/trace"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 )
 
 type ExchangeRate struct {
@@ -36,28 +37,41 @@ type CustomerInfoResponse struct {
 func (g *GiftCard) CustomerInfo(ctx context.Context) (CustomerInfoResponse, error) {
 	span, spannedContext := trace.T.SpanFromContext(
 		ctx,
-		"giftCardAdapter",
-		"adapter")
-
+		"GiftCardAdapter",
+		"Adapter",
+	)
 	defer span.End()
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 
 	url := g.BaseUrl + "/customer/info"
 	method := "GET"
 
 	data, err := g.ProcessRequest(spannedContext, method, url, nil)
 	if err != nil {
+		logger.Error("error while processing request to gift card provider",
+			zap.String("error", err.Error()),
+		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return CustomerInfoResponse{}, err
 	}
+
 	jsonData, err := json.Marshal(data)
 
 	var responseData CustomerInfoResponse
 	err = json.Unmarshal(jsonData, &responseData)
 	if err != nil {
+		logger.Error("error while unmarshal gift card provider response data",
+			zap.String("error", err.Error()),
+		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return CustomerInfoResponse{}, err
 	}
-	span.SetAttributes(attribute.String("msg", "calling adapter passed"))
+
+	span.SetAttributes(attribute.String("data from customer info adapter layer", string(jsonData)))
 	return responseData, nil
 }
 
