@@ -37,8 +37,8 @@ type CustomerInfoResponse struct {
 func (g *GiftCard) CustomerInfo(ctx context.Context) (CustomerInfoResponse, error) {
 	span, spannedContext := trace.T.SpanFromContext(
 		ctx,
+		"CustomerInfoAdapter",
 		"GiftCardAdapter",
-		"Adapter",
 	)
 	defer span.End()
 
@@ -71,7 +71,7 @@ func (g *GiftCard) CustomerInfo(ctx context.Context) (CustomerInfoResponse, erro
 		return CustomerInfoResponse{}, err
 	}
 
-	span.SetAttributes(attribute.String("data from customer info adapter layer", string(jsonData)))
+	span.SetAttributes(attribute.String("data", string(jsonData)))
 	return responseData, nil
 }
 
