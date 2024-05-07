@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"giftCard/internal/adaptor/postgres"
+	"giftcard/internal/adaptor/postgres"
 	"github.com/spf13/cobra"
 )
 

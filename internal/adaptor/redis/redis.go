@@ -2,7 +2,7 @@ package redis
 
 import (
 	"fmt"
-	"giftCard/config"
+	"giftcard/config"
 	"github.com/gomodule/redigo/redis"
 	"log"
 	"time"

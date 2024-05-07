@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"giftcard/internal/adaptor/trace"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 )
 
 type CustomerDeal struct {
@@ -39,11 +42,32 @@ type ProductResponse struct {
 }
 
 func (g *GiftCard) ShopItem(ctx context.Context, productId string) (ProductResponse, error) {
+	span, spannedContext := trace.T.SpanFromContext(
+		ctx,
+		"ShopItemAdapter",
+		"GiftCardAdapter",
+	)
+	defer span.End()
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	url := g.BaseUrl + fmt.Sprintf("/shop/products/%s", productId)
 	method := "GET"
 
-	data, err := g.ProcessRequest(ctx, method, url, nil)
+	data, err := g.ProcessRequest(spannedContext, method, url, nil)
+	if err != nil {
+		logger.Error("error while processing request to gift card provider",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
+		return ProductResponse{}, err
+	}
+
 	jsonData, err := json.Marshal(data)
+	span.SetAttributes(attribute.String("data", string(jsonData)))
 
 	var responseData ProductResponse
 	err = json.Unmarshal(jsonData, &responseData)

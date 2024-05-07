@@ -2,14 +2,16 @@ package delivery
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
-	gftErr "giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/modules/order/usecase"
-	"giftCard/pkg/responser"
+	gftErr "giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/modules/order/usecase"
+	"giftcard/pkg/responser"
+	"giftcard/pkg/utils"
 	"github.com/go-playground/validator"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -43,25 +45,43 @@ type OrderHandler struct {
 
 type OrderHandlerParams struct {
 	fx.In
-	Us     usecase.IOrderUseCase
-	Logger *zap.Logger
+	Us usecase.IOrderUseCase
+	//Logger *zap.Logger
 }
 
 func NewOrderHandler(params OrderHandlerParams) *OrderHandler {
 	return &OrderHandler{
-		us:     params.Us,
-		Logger: params.Logger,
+		us: params.Us,
+		//Logger: params.Logger,
 	}
 }
 
 func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
+	span, spannedContext := trace.T.SpanFromContext(
+		utils.GetRequestCtx(c),
+		"ConfirmOrder[OrderDelivery]",
+		"delivery")
+	defer span.End()
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 
 	var requestBody confirmOrderRequestBody
 	if err := c.Bind(&requestBody); err != nil {
+		logger.Info("response to client",
+			zap.Any("err", "invalid input for confirm order"),
+		)
+		span.SetAttributes(attribute.String("err", "invalid input for confirm order"))
 		return c.JSON(http.StatusBadRequest, responser.Response{Message: "Bad Request", Data: "", Success: false})
 	}
 	validate := validator.New()
 	if err := validate.Struct(&requestBody); err != nil {
+		logger.Info("response to client",
+			zap.Any("err", "invalid input for confirm order"),
+		)
+		span.SetAttributes(attribute.String("err", "invalid input for confirm order"))
 		var messages []string
 		for _, fieldErr := range err.(validator.ValidationErrors) {
 			messages = append(messages, fieldErr.Field()+" is invalid")
@@ -69,9 +89,6 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, responser.Response{Message: strings.Join(messages, ", "), Data: "", Success: false})
 	}
 
-	uniqueID := uuid.New().String()
-
-	logger := h.Logger.With(zap.String("tracer", uniqueID))
 	logger.Info("confirm order",
 		zap.Any("request_body", requestBody),
 		zap.String("user_ip", c.RealIP()),
@@ -81,14 +98,14 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 		zap.Any("headers", c.Request().Header),
 	)
 
-	ctx := context.WithValue(c.Request().Context(), "tracer", uniqueID)
+	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 	data, err := h.us.ConfirmOrder(ctx, requestBody.OrderId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			logger.Info("response confirm order",
+			logger.Info("response to client",
 				zap.Any("error", gorm.ErrRecordNotFound),
 			)
-
+			span.SetAttributes(attribute.String("err", gorm.ErrRecordNotFound.Error()))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: err.Error(),
 				Data:    "",
@@ -98,11 +115,10 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
-
-			logger.Info("response confirm order",
-				zap.Any("error", forbiddenErr.ErrMsg),
+			logger.Info("response to client",
+				zap.Any("data", forbiddenErr.ErrMsg),
 			)
-
+			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
 				Data:    "",
@@ -111,10 +127,11 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
-			logger.Info("response confirm order",
+			logger.Info("response to client",
 				zap.Any("error", reqErr.ErrMsg),
-				zap.Any("message", reqErr.Response),
+				zap.Any("data", reqErr.Response),
 			)
+			span.SetAttributes(attribute.String("err", reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
 				Data:    reqErr.Response,
@@ -122,10 +139,10 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 			})
 		}
 
-		logger.Info("response confirm order",
+		logger.Error("response to client",
 			zap.Any("error", "internal error"),
 		)
-
+		span.SetAttributes(attribute.String("err", err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Message: "something went wrong",
 			Data:    "",
@@ -136,12 +153,32 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 	logger.Info("confirm order response",
 		zap.Any("data", data["data"]))
 
+	dataJSON, err := json.Marshal(data)
+	span.SetAttributes(
+		attribute.String("message", "confirm order successfully passed."),
+		attribute.String("data", string(dataJSON)),
+	)
 	return c.JSON(http.StatusCreated, responser.Response{Data: data["data"], Message: "", Success: true})
 }
 
 func (h *OrderHandler) CreateOrder(c echo.Context) error {
+	span, spannedContext := trace.T.SpanFromContext(
+		utils.GetRequestCtx(c),
+		"CreateOrder[OrderDelivery]",
+		"delivery")
+	defer span.End()
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	var requestBody RequestBody
 	if err := c.Bind(&requestBody); err != nil {
+		logger.Info("response to client",
+			zap.Any("err", "invalid input for create order"),
+		)
+		span.SetAttributes(attribute.String("err", "invalid input for create order"))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Data:    "",
 			Message: "bad request",
@@ -151,6 +188,11 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	validate := validator.New()
 	if err := validate.Struct(&requestBody); err != nil {
+		logger.Info("response to client",
+			zap.Any("err", "invalid input for create order"),
+		)
+		span.SetAttributes(attribute.String("err", "invalid input for create order"))
+
 		var messages []string
 		for _, fieldErr := range err.(validator.ValidationErrors) {
 			messages = append(messages, fieldErr.Field()+" is invalid")
@@ -162,6 +204,10 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		})
 	}
 	if len(requestBody.ProductList) == 0 {
+		logger.Info("response to client",
+			zap.Any("err", "invalid input for create order"),
+		)
+		span.SetAttributes(attribute.String("err", "invalid input for create order"))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Data:    "",
 			Message: "product list can not be empty",
@@ -180,12 +226,6 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		productList = append(productList, productMap)
 	}
 
-	uniqueID := uuid.New().String()
-	ctx := context.WithValue(c.Request().Context(), "tracer", uniqueID)
-
-	data, err := h.us.CreateOrder(ctx, productList)
-
-	logger := h.Logger.With(zap.String("tracer", uniqueID))
 	logger.Info("create order",
 		zap.Any("request_body", requestBody),
 		zap.String("user_ip", c.RealIP()),
@@ -195,35 +235,40 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		zap.Any("headers", c.Request().Header),
 	)
 
+	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
+	data, err := h.us.CreateOrder(ctx, productList)
+
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
-			logger.Info("response create order",
-				zap.String("message", forbiddenErr.ErrMsg),
+			logger.Info("response to client",
+				zap.Any("data", forbiddenErr.ErrMsg),
 			)
+			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
 				Data:    "",
 				Success: false,
 			})
 		}
+
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
-
-			logger.Info("response create order",
-				zap.String("message", reqErr.ErrMsg),
+			logger.Info("response to client",
+				zap.Any("error", reqErr.ErrMsg),
 				zap.Any("data", reqErr.Response),
 			)
-
+			span.SetAttributes(attribute.String("err", reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
-				Message: fmt.Sprintf("%s", reqErr.Response["message"]),
-				Data:    "",
+				Message: "",
+				Data:    reqErr.Response,
 				Success: false,
 			})
 		}
-		logger.Info("response create order",
-			zap.String("message", "internal error"),
+		logger.Error("response to client",
+			zap.Any("error", "internal error"),
 		)
+		span.SetAttributes(attribute.String("err", err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Data:    "",
 			Message: "something went wrong",
@@ -231,28 +276,51 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		})
 	}
 
-	logger.Info("response create order",
+	logger.Info("create order response",
 		zap.Any("data", data.Data))
+
+	dataJSON, err := json.Marshal(data)
+	span.SetAttributes(
+		attribute.String("message", "create order successfully passed."),
+		attribute.String("data", string(dataJSON)),
+	)
 
 	return c.JSON(http.StatusCreated, responser.Response{Data: data.Data, Message: "", Success: true})
 }
 
 func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
+	span, spannedContext := trace.T.SpanFromContext(
+		utils.GetRequestCtx(c),
+		"RetrieveOrder[OrderDelivery]",
+		"delivery")
+	defer span.End()
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 
 	var request retrieveOrderRequest
 
 	if err := c.Bind(&request); err != nil {
+		logger.Info("response to client",
+			zap.Any("err", "invalid input for get order status"),
+		)
+		span.SetAttributes(attribute.String("err", "invalid input for get order status"))
 		return c.JSON(http.StatusBadRequest, responser.Response{Data: "", Message: "bas request", Success: false})
 	}
 
 	orderId := request.OrderId
 	if orderId == "" {
+		logger.Info("response to client",
+			zap.Any("err", "invalid input for get order status"),
+		)
+		span.SetAttributes(attribute.String("err", "invalid input for get order status"))
 		return c.JSON(http.StatusBadRequest, responser.Response{Data: "", Message: "Order ID is required", Success: false})
 	}
-	queryParams := c.QueryParams()
-	uniqueID := uuid.New().String()
 
-	logger := h.Logger.With(zap.String("tracer", uniqueID))
+	queryParams := c.QueryParams()
+
 	logger.Info("get order status",
 		zap.String("user_ip", c.RealIP()),
 		zap.String("uri", c.Path()),
@@ -262,14 +330,14 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		zap.Any("headers", c.Request().Header),
 	)
 
-	ctx := context.WithValue(c.Request().Context(), "tracer", uniqueID)
+	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 	data, err := h.us.GetOrderStatus(ctx, orderId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
-			logger.Info("response get order status",
-				zap.Any("message", gorm.ErrRecordNotFound))
-
+			logger.Info("response to client",
+				zap.Any("error", gorm.ErrRecordNotFound),
+			)
+			span.SetAttributes(attribute.String("err", gorm.ErrRecordNotFound.Error()))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: "record not found",
 				Data:    "",
@@ -278,11 +346,10 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		}
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
-
-			logger.Info("response get order status",
-				zap.String("message", forbiddenErr.ErrMsg),
+			logger.Info("response to client",
+				zap.Any("data", forbiddenErr.ErrMsg),
 			)
-
+			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
 				Data:    "",
@@ -291,28 +358,32 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
-
-			logger.Info("response get order status",
-				zap.String("message", reqErr.ErrMsg),
+			logger.Info("response to client",
+				zap.Any("error", reqErr.ErrMsg),
 				zap.Any("data", reqErr.Response),
 			)
-
+			span.SetAttributes(attribute.String("err", reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
 				Data:    reqErr.Response,
 				Success: false,
 			})
 		}
-		logger.Info("response get order status",
-			zap.String("message", "internal error"),
-			zap.String("data", err.Error()),
+
+		logger.Error("response to client",
+			zap.Any("error", "internal error"),
 		)
+		span.SetAttributes(attribute.String("err", err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{Data: "", Message: "something went wrong", Success: false})
 	}
 
-	logger.Info("response get order status",
-		zap.Any("data", data["data"]),
-	)
+	logger.Info("get order status response",
+		zap.Any("data", data["data"]))
 
+	dataJSON, err := json.Marshal(data)
+	span.SetAttributes(
+		attribute.String("message", "get order status successfully passed."),
+		attribute.String("data", string(dataJSON)),
+	)
 	return c.JSON(http.StatusOK, responser.Response{Data: data["data"], Message: "", Success: true})
 }

@@ -2,11 +2,15 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/modules/order/repository"
-	"giftCard/model"
+	"giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/modules/order/repository"
+	"giftcard/model"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -29,16 +33,40 @@ func NewOrderUseCase(params GiftCardOrderUseCaseParams) IOrderUseCase {
 }
 
 func (us giftCardOrderUseCase) GetOrderStatus(ctx context.Context, orderId string) (map[string]any, error) {
+	span, spannedContext := trace.T.SpanFromContext(
+		ctx,
+		"GetOrderStatusUseCase",
+		"UseCase")
+	defer span.End()
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	order, err := us.repo.GetOrder(orderId)
 	if err != nil {
+		logger.Error("error while get order from DB",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
+
 	if order == nil {
+		logger.Error("error while get order from DB",
+			zap.String("error", fmt.Sprintf("order with ID %s not found", orderId)))
+		span.SetAttributes(attribute.String("error", fmt.Sprintf("order with ID %s not found", orderId)))
 		return nil, fmt.Errorf("order with ID %s not found", orderId)
 	}
 
-	data, err := us.gf.RetrieveOrder(ctx, orderId)
+	data, err := us.gf.RetrieveOrder(spannedContext, orderId)
 	if err != nil {
+		logger.Error("error while processing gift card retrieve order",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -52,14 +80,36 @@ func (us giftCardOrderUseCase) GetOrderStatus(ctx context.Context, orderId strin
 		return nil, err
 	}
 	if err := us.repo.UpdateOrder(order, status); err != nil {
+		logger.Error("error while update order status from DB",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
-
+	jsonData, err := json.Marshal(data)
+	span.SetAttributes(attribute.String("data", string(jsonData)))
 	return data, nil
 }
+
 func (us giftCardOrderUseCase) CreateOrder(ctx context.Context, productList []map[string]any) (giftcard.OrderResponse, error) {
-	data, err := us.gf.CreateOrder(ctx, productList)
+	span, spannedContext := trace.T.SpanFromContext(
+		ctx,
+		"CreateOrderUseCase",
+		"UseCase")
+	defer span.End()
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
+	data, err := us.gf.CreateOrder(spannedContext, productList)
 	if err != nil {
+		logger.Error("error while processing gift card create order",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return giftcard.OrderResponse{}, err
 	}
 
@@ -75,19 +125,45 @@ func (us giftCardOrderUseCase) CreateOrder(ctx context.Context, productList []ma
 	}
 	err = us.repo.InsertOrder(order)
 	if err != nil {
+		logger.Error("error while insert new order from DB",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return giftcard.OrderResponse{}, err
 	}
+
+	jsonData, err := json.Marshal(data)
+	span.SetAttributes(attribute.String("data", string(jsonData)))
 	return data, nil
 }
 func (us giftCardOrderUseCase) ConfirmOrder(ctx context.Context, orderId string) (map[string]any, error) {
+	span, spannedContext := trace.T.SpanFromContext(
+		ctx,
+		"GetOrderStatusUseCase",
+		"UseCase")
+	defer span.End()
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	order, err := us.repo.GetOrder(orderId)
 	if err != nil {
+		logger.Error("error while get order from DB",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
 
-	data, err := us.gf.ConfirmOrder(ctx, orderId)
-
+	data, err := us.gf.ConfirmOrder(spannedContext, orderId)
 	if err != nil {
+		logger.Error("error while processing gift card confirm order",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
 
@@ -103,7 +179,14 @@ func (us giftCardOrderUseCase) ConfirmOrder(ctx context.Context, orderId string)
 
 	err = us.repo.UpdateOrder(order, state)
 	if err != nil {
+		logger.Error("error while update order status from DB",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}
+
+	jsonData, err := json.Marshal(data)
+	span.SetAttributes(attribute.String("data", string(jsonData)))
 	return data, nil
 }

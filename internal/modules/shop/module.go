@@ -1,8 +1,8 @@
 package shop
 
 import (
-	"giftCard/internal/modules/shop/delivery/http"
-	"giftCard/internal/modules/shop/usecase"
+	"giftcard/internal/modules/shop/delivery/http"
+	"giftcard/internal/modules/shop/usecase"
 	"go.uber.org/fx"
 )
 

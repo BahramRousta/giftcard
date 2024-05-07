@@ -1,7 +1,7 @@
 package routes
 
 import (
-	shopDelivery "giftCard/internal/modules/shop/delivery/http"
+	shopDelivery "giftcard/internal/modules/shop/delivery/http"
 	"github.com/labstack/echo/v4"
 )
 

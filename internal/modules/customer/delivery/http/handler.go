@@ -3,12 +3,16 @@ package delivery
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
-	gftErr "giftCard/internal/adaptor/giftcard"
-	"giftCard/internal/modules/customer/usecase"
-	"giftCard/pkg/responser"
-	"github.com/google/uuid"
+	gftErr "giftcard/internal/adaptor/giftcard"
+	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/modules/customer/usecase"
+	"giftcard/pkg/responser"
+	"giftcard/pkg/utils"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel/attribute"
+	_ "go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"io"
@@ -17,23 +21,26 @@ import (
 
 type CustomerInfoHandler struct {
 	customerUseCase usecase.ICustomerUseCase
-	Logger          *zap.Logger
 }
 
 type CustomerInfoHandlerParams struct {
 	fx.In
 	CustomerUseCase *usecase.CustomerUseCase
-	Logger          *zap.Logger
 }
 
 func NewCustomerInfoHandler(params CustomerInfoHandlerParams) *CustomerInfoHandler {
 	return &CustomerInfoHandler{
 		customerUseCase: params.CustomerUseCase,
-		Logger:          params.Logger,
 	}
 }
 
 func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
+
+	span, spannedContext := trace.T.SpanFromContext(
+		utils.GetRequestCtx(c),
+		"CustomerInfo[CustomerDelivery]",
+		"delivery")
+	defer span.End()
 
 	requestBody := ""
 	if c.Request().Body != nil {
@@ -44,12 +51,9 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		}
 	}
 
-	uniqueID := uuid.New().String()
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
 
-	ctx := context.WithValue(c.Request().Context(), "tracer", uniqueID)
-	data, err := h.customerUseCase.GetCustomerInfoUseCase(ctx)
-
-	logger := h.Logger.With(
+	logger := zap.L().With(
 		zap.String("tracer", uniqueID),
 	)
 	logger.Info("customer info request",
@@ -61,26 +65,49 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		zap.Any("header", c.Request().Header),
 	)
 
+	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
+	data, err := h.customerUseCase.GetCustomerInfoUseCase(ctx)
+
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			logger.Info("response to client",
+				zap.Any("data", forbiddenErr.ErrMsg),
+			)
+			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
 				Data:    "",
 				Success: false,
 			})
 		}
+
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
+			logger.Info("response to client",
+				zap.Any("error", reqErr.ErrMsg),
+				zap.Any("data", reqErr.Response),
+			)
+			span.SetAttributes(attribute.String("err", reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, map[string]any{
 				"message": reqErr.ErrMsg,
 				"data":    reqErr.Response,
 				"success": false,
 			})
 		}
+		logger.Error("response to client",
+			zap.Any("error", "internal error"),
+		)
+		span.SetAttributes(attribute.String("err", err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{Message: "Something went wrong", Data: "", Success: false})
 	}
-	logger.Info("customer info response",
-		zap.Any("data", data.Data))
+
+	//logger.Info("customer info response", zap.Any("data", data.Data))
+
+	dataJSON, err := json.Marshal(data.Data)
+	span.SetAttributes(
+		attribute.String("message", "get customer info successfully passed."),
+		attribute.String("data", string(dataJSON)),
+	)
 	return c.JSON(http.StatusOK, responser.Response{Message: "", Success: true, Data: data.Data})
 }

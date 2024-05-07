@@ -1,6 +1,6 @@
 package repository
 
-import "giftCard/model"
+import "giftcard/model"
 
 type IOrderRepository interface {
 	InsertOrder(order *model.Order) error

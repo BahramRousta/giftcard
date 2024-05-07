@@ -2,8 +2,8 @@ package postgres
 
 import (
 	"fmt"
-	"giftCard/config"
-	model2 "giftCard/model"
+	"giftcard/config"
+	model2 "giftcard/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"

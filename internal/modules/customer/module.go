@@ -1,9 +1,9 @@
 package customer
 
 import (
-	"giftCard/internal/modules/customer/delivery/http"
-	"giftCard/internal/modules/customer/repository"
-	"giftCard/internal/modules/customer/usecase"
+	"giftcard/internal/modules/customer/delivery/http"
+	"giftcard/internal/modules/customer/repository"
+	"giftcard/internal/modules/customer/usecase"
 	"go.uber.org/fx"
 )
 

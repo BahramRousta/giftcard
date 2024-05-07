@@ -1,0 +1,86 @@
+version: "3.9"
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    environment:
+      - LOG_LEVEL=DEBUG
+      - JAEGER_AGENT_HOST=jaeger
+      - JAEGER_AGENT_PORT=4318
+      - SPAN_STORAGE_TYPE=elasticsearch
+      - ES_SERVER_URLS=http://elasticsearch:9200
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512MB"
+    depends_on:
+      - elasticsearch
+    networks:
+      - my_network
+
+  logstash:
+    hostname: logstash
+    image: logstash:8.12.0
+    container_name: logstash
+    volumes:
+      - ./internal/adaptor/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+#      - "5000:5000"
+      - "5044:5044"
+      - "9600:9600/udp"
+    environment:
+      - "ELASTICSEARCH_HOST=elasticsearch"
+      - "ELASTICSEARCH_PORT=9200"
+      - "LOGSTASH_HOST=localhost"
+      - "LOGSTASH_PORT=5044"
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512MB"
+    networks:
+      - my_network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.17
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node  # Run Elasticsearch as a single-node cluster
+      - bootstrap.memory_lock=true
+    #      - ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512MB"
+    networks:
+      - my_network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.17  # Match Elasticsearch version
+    container_name: kibana
+    ports:
+      - "5601:5601"  # Kibana port
+    depends_on:
+      - elasticsearch  # Wait for Elasticsearch to start
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512MB"
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    driver: bridge
