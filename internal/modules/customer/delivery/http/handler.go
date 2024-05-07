@@ -81,13 +81,14 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 				Success: false,
 			})
 		}
+
 		var reqErr *gftErr.RequestErr
-		logger.Info("response to client",
-			zap.Any("error", reqErr.ErrMsg),
-			zap.Any("data", reqErr.Response),
-		)
-		span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
 		if errors.As(err, &reqErr) {
+			logger.Info("response to client",
+				zap.Any("error", reqErr.ErrMsg),
+				zap.Any("data", reqErr.Response),
+			)
+			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, map[string]any{
 				"message": reqErr.ErrMsg,
 				"data":    reqErr.Response,
@@ -97,6 +98,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		logger.Error("response to client",
 			zap.Any("error", "internal error"),
 		)
+		span.SetAttributes(attribute.String("err", err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{Message: "Something went wrong", Data: "", Success: false})
 	}
 

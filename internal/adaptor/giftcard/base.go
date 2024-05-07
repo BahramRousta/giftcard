@@ -120,5 +120,5 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		attribute.Int("status_code", res.StatusCode),
 	)
 
-	return responseData, &RequestErr{ErrMsg: "error from provider"}
+	return responseData, &RequestErr{ErrMsg: "error from provider", Response: responseData}
 }
