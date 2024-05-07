@@ -88,7 +88,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 				zap.Any("error", reqErr.ErrMsg),
 				zap.Any("data", reqErr.Response),
 			)
-			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
+			span.SetAttributes(attribute.String("err", reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, map[string]any{
 				"message": reqErr.ErrMsg,
 				"data":    reqErr.Response,

@@ -80,7 +80,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 				zap.Any("error", reqErr.ErrMsg),
 				zap.Any("data", reqErr.Response),
 			)
-			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
+			span.SetAttributes(attribute.String("err", reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
 				Data:    reqErr.Response,
