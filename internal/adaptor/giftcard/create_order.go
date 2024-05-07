@@ -3,6 +3,9 @@ package giftcard
 import (
 	"context"
 	"encoding/json"
+	"giftcard/internal/adaptor/trace"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 )
 
 type ModifiedDate struct {
@@ -65,6 +68,19 @@ type OrderResponse struct {
 }
 
 func (g *GiftCard) CreateOrder(ctx context.Context, productList []map[string]any) (OrderResponse, error) {
+
+	span, spannedContext := trace.T.SpanFromContext(
+		ctx,
+		"CustomerInfoAdapter",
+		"GiftCardAdapter",
+	)
+	defer span.End()
+
+	uniqueID, _ := ctx.Value("tracer").(string)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	url := g.BaseUrl + "/order/create"
 	method := "POST"
 
@@ -75,11 +91,19 @@ func (g *GiftCard) CreateOrder(ctx context.Context, productList []map[string]any
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
+		logger.Error("error while prepare request to gift card provider",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return OrderResponse{}, err
 	}
 
-	data, err := g.ProcessRequest(ctx, method, url, &payloadBytes)
+	data, err := g.ProcessRequest(spannedContext, method, url, &payloadBytes)
 	if err != nil {
+		logger.Error("error while processing request to gift card provider",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return OrderResponse{}, err
 	}
 
@@ -88,6 +112,10 @@ func (g *GiftCard) CreateOrder(ctx context.Context, productList []map[string]any
 	var responseData OrderResponse
 	err = json.Unmarshal(jsonData, &responseData)
 	if err != nil {
+		logger.Error("error while unmarshal gift card provider response data",
+			zap.String("error", err.Error()),
+		)
+		span.SetAttributes(attribute.String("error", err.Error()))
 		return OrderResponse{}, err
 	}
 	return responseData, nil
