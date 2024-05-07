@@ -11,13 +11,14 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	_url "net/url"
+	"time"
 )
 
 type GiftCard struct {
 	BaseUrl      string `json:"baseUrl"`
 	ClientID     string `json:"clientID"`
 	ClientSecret string `json:"clientSecret"`
-	//Logger       *zap.Logger
 }
 
 func NewGiftCard() *GiftCard {
@@ -25,9 +26,10 @@ func NewGiftCard() *GiftCard {
 		BaseUrl:      config.C().Service.BaseUrl,
 		ClientID:     config.C().Service.ClientID,
 		ClientSecret: config.C().Service.ClientSecret,
-		//Logger:       logger,
 	}
 }
+
+const maxRetries = 3
 
 func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string, payload *[]byte) (map[string]any, error) {
 	span, spannedContext := trace.T.SpanFromContext(
@@ -75,20 +77,42 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		zap.Any("params", req.URL.Query()),
 	)
 
-	res, err := client.Do(req)
-	if err != nil {
-		logger.Error("error while sending request to gift card provider",
-			zap.String("err", err.Error()))
-		span.SetAttributes(attribute.String("error", err.Error()))
-		return nil, errors.New("error while sending request")
-	}
-	defer res.Body.Close()
+	var res *http.Response
+	var bodyBytes []byte
 
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		span.SetAttributes(attribute.String("error", err.Error()))
-		return nil, errors.New("error while process response")
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		res, err = client.Do(req)
+		if err != nil {
+			var urlErr *_url.Error
+			if errors.As(err, &urlErr) {
+				logger.Error("URL error encountered", zap.String("error", urlErr.Error()))
+				span.SetAttributes(attribute.String("error", "URL error"))
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			if isEOFError(err) {
+				logger.Error("EOF error encountered, retrying...",
+					zap.String("err", err.Error()))
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			logger.Error("error while sending request to gift card provider",
+				zap.String("err", err.Error()))
+			span.SetAttributes(attribute.String("error", err.Error()))
+			return nil, errors.New("error while sending request")
+		}
+
+		bodyBytes, err = io.ReadAll(res.Body)
+		if err != nil {
+			span.SetAttributes(attribute.String("error", err.Error()))
+			return nil, errors.New("error while process response")
+		}
+		break
 	}
+
+	defer res.Body.Close()
 
 	var responseData map[string]any
 
@@ -121,4 +145,8 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 	)
 
 	return responseData, &RequestErr{ErrMsg: "error from provider", Response: responseData}
+}
+
+func isEOFError(err error) bool {
+	return err != nil && err == io.EOF
 }
