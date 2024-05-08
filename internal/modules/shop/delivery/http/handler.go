@@ -3,7 +3,6 @@ package delivery
 import (
 	"context"
 	"errors"
-	"fmt"
 	gftErr "giftcard/internal/adaptor/giftcard"
 	"giftcard/internal/adaptor/trace"
 	"giftcard/internal/exceptions"
@@ -39,12 +38,6 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		"ShopItem[ShopDelivery]",
 		"delivery")
 	defer span.End()
-
-	productId := c.QueryParam("productId")
-	if productId == "" {
-		return c.String(http.StatusBadRequest, "productId is required")
-	}
-
 	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
 	request := requester.Request{
 		ID:          uniqueID,
@@ -57,6 +50,12 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		Params:      c.QueryParams(),
 	}
 	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
+
+	productId := c.QueryParam("productId")
+	if productId == "" {
+		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, exceptions.ProductIDError))
+		return c.String(http.StatusBadRequest, exceptions.ProductIDError)
+	}
 
 	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 
@@ -82,7 +81,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		}
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
-			Message: "something went wrong",
+			Message: exceptions.InternalServerError,
 			Data:    "",
 			Success: false,
 		})
@@ -125,7 +124,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	if err != nil {
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{
-			Message: "pageSize must be an integer",
+			Message: exceptions.PageSizeError,
 			Success: false,
 			Data:    "",
 		})
@@ -135,7 +134,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	if err := validate.Var(pageSize, "min=5,max=50"); err != nil {
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{
-			Message: fmt.Sprintf("page size must between 5 to 50."),
+			Message: exceptions.PageSizeError,
 			Success: false,
 			Data:    "",
 		})
@@ -167,7 +166,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Data:    "",
-			Message: "Something went wrong",
+			Message: exceptions.InternalServerError,
 			Success: false,
 		})
 	}

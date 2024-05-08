@@ -4,7 +4,7 @@ import "net/url"
 
 type Request struct {
 	ID          string
-	RequestBody string
+	RequestBody any
 	UserIP      string
 	Uri         string
 	Method      string

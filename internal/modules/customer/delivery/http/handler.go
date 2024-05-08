@@ -90,7 +90,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		}
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
-			Message: "Something went wrong",
+			Message: exceptions.InternalServerError,
 			Data:    "",
 			Success: false})
 	}
