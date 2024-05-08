@@ -7,6 +7,7 @@ import (
 	"giftcard/internal/adaptor/giftcard"
 	"giftcard/internal/adaptor/logstash"
 	"giftcard/internal/adaptor/postgres"
+	"giftcard/internal/adaptor/redis"
 	"giftcard/internal/adaptor/trace"
 	customerModule "giftcard/internal/modules/customer"
 	orderModule "giftcard/internal/modules/order"
@@ -27,6 +28,7 @@ func Start() {
 	fxNew := fx.New(
 		fx.Provide(config.C),
 		fx.Provide(postgres.DB),
+		fx.Provide(redis.NewRedis),
 		customerModule.Module,
 		orderModule.Module,
 		shopModule.Module,

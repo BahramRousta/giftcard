@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"giftcard/config"
+	"giftcard/internal/adaptor/redis"
 	"giftcard/internal/adaptor/trace"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"io"
@@ -19,13 +21,15 @@ type GiftCard struct {
 	BaseUrl      string `json:"baseUrl"`
 	ClientID     string `json:"clientID"`
 	ClientSecret string `json:"clientSecret"`
+	redis        *redis.Store
 }
 
-func NewGiftCard() *GiftCard {
+func NewGiftCard(redisStore *redis.Store) *GiftCard {
 	return &GiftCard{
 		BaseUrl:      config.C().Service.BaseUrl,
 		ClientID:     config.C().Service.ClientID,
 		ClientSecret: config.C().Service.ClientSecret,
+		redis:        redisStore,
 	}
 }
 

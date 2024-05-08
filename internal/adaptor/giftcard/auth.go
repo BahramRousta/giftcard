@@ -3,13 +3,12 @@ package giftcard
 import (
 	"context"
 	"errors"
-	rds "giftcard/internal/adaptor/redis"
 	"giftcard/internal/adaptor/trace"
-	"github.com/gomodule/redigo/redis"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"time"
 )
 
 type AuthToken struct {
@@ -17,7 +16,7 @@ type AuthToken struct {
 }
 
 func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
-	span, _ := trace.T.SpanFromContext(
+	span, spannedContext := trace.T.SpanFromContext(
 		ctx,
 		"AuthGiftCardRequest",
 		"adapter")
@@ -29,14 +28,13 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 		zap.String("tracer", uniqueID),
 	)
 
-	conn := rds.GetRedisConn()
-	defer conn.Close()
-
-	token, err := redis.String(conn.Do("GET", "giftcard_token"))
-
 	var authToken AuthToken
-	if err == nil {
-		authToken.Token = token
+	getTokenErr := g.redis.Get(spannedContext, "giftcard_token", &authToken.Token)
+	if getTokenErr != nil {
+		span.SetAttributes(attribute.String("get From Redis error", getTokenErr.Error()))
+	}
+
+	if authToken.Token != "" {
 		return authToken, nil
 	}
 
@@ -87,10 +85,13 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 	if res.StatusCode == http.StatusOK {
 		authHeader := res.Header.Get("Authorization")
 		span.SetAttributes(attribute.String("token", authHeader))
-		_, err = conn.Do("SET", "giftcard_token", authHeader, "EX", 3600)
-		if err != nil {
-			logger.Error("can not set token into cache", zap.String("err", err.Error()))
+
+		setToRedisErr := g.redis.Set(spannedContext, "giftcard_token", authHeader, 360*time.Second)
+
+		if setToRedisErr != nil {
+			span.SetAttributes(attribute.String("set To Redis error", setToRedisErr.Error()))
 		}
+
 		authToken.Token = authHeader
 		return authToken, nil
 	}
