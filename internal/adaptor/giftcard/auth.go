@@ -35,6 +35,7 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 	}
 
 	if authToken.Token != "" {
+		span.SetAttributes(attribute.String("get token from redis", authToken.Token))
 		return authToken, nil
 	}
 

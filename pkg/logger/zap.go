@@ -2,15 +2,14 @@ package logger
 
 import (
 	"context"
-	"io"
-	"log"
-	"os"
-
 	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.elastic.co/ecszap"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"io"
+	"log"
+	"os"
 
 	"giftcard/config"
 	"giftcard/internal/adaptor/logstash"

@@ -3,7 +3,6 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"giftcard/config"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
@@ -58,7 +57,6 @@ func (r *Store) Set(ctx context.Context, key string, value interface{}, duration
 // Get meth, get value with key
 func (r *Store) Get(ctx context.Context, key string, dest interface{}) error {
 	p, err := r.db.Get(ctx, key).Result()
-	fmt.Println("something", p)
 	if err != nil {
 		return err
 	}
