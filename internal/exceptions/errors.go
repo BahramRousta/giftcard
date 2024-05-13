@@ -13,4 +13,5 @@ const (
 	EmptyProductList         = "لیست سفارش نمی تواند خالی باشد"
 	PageSizeError            = "تعداد لیست درخواست ها باید بین ۵ تا ۵۰ باشد"
 	ProductIDError           = "آی دی محصول مورد نیاز است"
+	DBError                  = "خطای دیتابیس"
 )

@@ -14,6 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 )
@@ -39,6 +40,10 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		"delivery")
 	defer span.End()
 	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	request := requester.Request{
 		ID:          uniqueID,
 		RequestBody: "",
@@ -49,10 +54,12 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		Header:      c.Request().Header,
 		Params:      c.QueryParams(),
 	}
+	logger.Info("Request from client", zap.Any("data", request))
 	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
 
 	productId := c.QueryParam("productId")
 	if productId == "" {
+		logger.Info("Response to client", zap.Any("error", exceptions.ProductIDError))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, exceptions.ProductIDError))
 		return c.String(http.StatusBadRequest, exceptions.ProductIDError)
 	}
@@ -63,6 +70,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			logger.Info("Response to client", zap.Any("error", forbiddenErr.ErrMsg))
 			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
@@ -72,6 +80,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
+			logger.Info("Response to client", zap.Any("error", reqErr.ErrMsg))
 			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
@@ -79,6 +88,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 				Success: false,
 			})
 		}
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Message: exceptions.InternalServerError,
@@ -92,6 +102,7 @@ func (h *ShopHandler) ShopItem(c echo.Context) error {
 		Success: true,
 		Data:    data.Data,
 	}
+	logger.Info("Response to client", zap.Any("data", response))
 	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
 	return c.JSON(http.StatusOK, response)
 }
@@ -104,6 +115,10 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	defer span.End()
 
 	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	request := requester.Request{
 		ID:          uniqueID,
 		RequestBody: "",
@@ -114,6 +129,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 		Header:      c.Request().Header,
 		Params:      c.QueryParams(),
 	}
+	logger.Info("Request from client", zap.Any("data", request))
 	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
 
 	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
@@ -122,6 +138,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	pageSize, err := strconv.Atoi(pageSizeHeader)
 
 	if err != nil {
+		logger.Info("Response to client", zap.Any("error", exceptions.PageSizeError))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Message: exceptions.PageSizeError,
@@ -132,6 +149,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 
 	validate := validator.New()
 	if err := validate.Var(pageSize, "min=5,max=50"); err != nil {
+		logger.Info("Response to client", zap.Any("error", exceptions.PageSizeError))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Message: exceptions.PageSizeError,
@@ -147,6 +165,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			logger.Info("Response to client", zap.Any("error", forbiddenErr.ErrMsg))
 			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
@@ -156,13 +175,15 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
-			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
+			logger.Info("Response to client", zap.Any("error", reqErr.ErrMsg))
+			span.SetAttributes(attribute.String(exceptions.StatusForbidden, reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
 				Data:    reqErr.Response,
 				Success: false,
 			})
 		}
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Data:    "",
@@ -175,6 +196,7 @@ func (h *ShopHandler) ShopList(c echo.Context) error {
 		Success: true,
 		Data:    data["data"],
 	}
+	logger.Info("Response to client", zap.Any("data", response))
 	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
 	return c.JSON(http.StatusOK, response)
 }

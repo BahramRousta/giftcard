@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	_ "go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 )
@@ -52,6 +53,9 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	}
 
 	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 
 	request := requester.Request{
 		ID:          uniqueID,
@@ -63,7 +67,8 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		Header:      c.Request().Header,
 		Params:      c.QueryParams(),
 	}
-	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
+	logger.Info("Request from client", zap.Any("data", request))
+	span.SetAttributes(attribute.String("Request from client", utils.Marshal(request)))
 
 	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 	data, err := h.customerUseCase.GetCustomerInfoUseCase(ctx)
@@ -71,6 +76,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			logger.Info("Response to client", zap.Any("error", forbiddenErr.ErrMsg))
 			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
@@ -81,6 +87,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
+			logger.Info("Response to client", zap.Any("error", reqErr.Error))
 			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
@@ -88,6 +95,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 				Success: false,
 			})
 		}
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Message: exceptions.InternalServerError,
@@ -100,6 +108,7 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 		Success: true,
 		Data:    data.Data,
 	}
-	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
+	logger.Info("Response to client", zap.Any("data", response))
+	span.SetAttributes(attribute.String("Request to client", utils.Marshal(response)))
 	return c.JSON(http.StatusOK, response)
 }

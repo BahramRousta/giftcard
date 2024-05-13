@@ -63,8 +63,13 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 		"delivery")
 	defer span.End()
 
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 	var requestBody confirmOrderRequestBody
 	if err := c.Bind(&requestBody); err != nil {
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Message: exceptions.InvalidConfirmOrderInput,
@@ -74,6 +79,7 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 
 	validate := validator.New()
 	if err := validate.Struct(&requestBody); err != nil {
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Message: exceptions.InvalidConfirmOrderInput,
@@ -81,7 +87,6 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 			Success: false})
 	}
 
-	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
 	request := requester.Request{
 		ID:          uniqueID,
 		RequestBody: requestBody,
@@ -92,13 +97,15 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 		Header:      c.Request().Header,
 		Params:      c.QueryParams(),
 	}
-	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
+	logger.Info("Request from client", zap.Any("data", request))
+	span.SetAttributes(attribute.String("Request from client", utils.Marshal(request)))
 
 	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 	data, err := h.us.ConfirmOrder(ctx, requestBody.OrderId)
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, gorm.ErrRecordNotFound.Error()))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: err.Error(),
@@ -109,6 +116,7 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
@@ -118,6 +126,7 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
@@ -126,6 +135,7 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 			})
 		}
 
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Message: exceptions.InternalServerError,
@@ -139,6 +149,8 @@ func (h *OrderHandler) ConfirmOrder(c echo.Context) error {
 		Success: true,
 		Data:    data["data"],
 	}
+
+	logger.Info("Response to client", zap.Any("data", response))
 	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
 
 	return c.JSON(http.StatusCreated, response)
@@ -151,8 +163,14 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		"delivery")
 	defer span.End()
 
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	var requestBody RequestBody
 	if err := c.Bind(&requestBody); err != nil {
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, exceptions.InvalidCreateOrderInput))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Data:    "",
@@ -163,6 +181,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 	validate := validator.New()
 	if err := validate.Struct(&requestBody); err != nil {
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Data:    "",
@@ -172,6 +191,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 	}
 
 	if len(requestBody.ProductList) == 0 {
+		logger.Info("Response to client", zap.Any("error", exceptions.EmptyProductList))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, exceptions.EmptyProductList))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Data:    "",
@@ -191,7 +211,6 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		productList = append(productList, productMap)
 	}
 
-	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
 	request := requester.Request{
 		ID:          uniqueID,
 		RequestBody: requestBody,
@@ -202,6 +221,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		Header:      c.Request().Header,
 		Params:      c.QueryParams(),
 	}
+	logger.Info("Request from client", zap.Any("data", request))
 	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
 
 	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
@@ -211,6 +231,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
@@ -221,6 +242,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: "",
@@ -229,6 +251,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 			})
 		}
 
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Data:    "",
@@ -242,6 +265,7 @@ func (h *OrderHandler) CreateOrder(c echo.Context) error {
 		Success: true,
 		Data:    data.Data,
 	}
+	logger.Info("Response to client", zap.Any("data", response))
 	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
 
 	return c.JSON(http.StatusCreated, response)
@@ -254,22 +278,28 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		"delivery")
 	defer span.End()
 
+	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
+
 	var retOrderReq retrieveOrderRequest
 	if err := c.Bind(&retOrderReq); err != nil {
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, err.Error()))
 		return c.JSON(http.StatusBadRequest, responser.Response{Data: "", Message: exceptions.InvalidInput, Success: false})
 	}
 
 	orderId := retOrderReq.OrderId
 	if orderId == "" {
-		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, "Order ID is required"))
+		logger.Info("Response to client", zap.Any("error", exceptions.RequiredOrderID))
+		span.SetAttributes(attribute.String(exceptions.StatusBadRequest, exceptions.RequiredOrderID))
 		return c.JSON(http.StatusBadRequest, responser.Response{
 			Data:    "",
 			Message: exceptions.RequiredOrderID,
 			Success: false})
 	}
 
-	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
 	request := requester.Request{
 		ID:          uniqueID,
 		RequestBody: retOrderReq,
@@ -280,12 +310,14 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		Header:      c.Request().Header,
 		Params:      c.QueryParams(),
 	}
+	logger.Info("Request from client", zap.Any("data", request))
 	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
 
 	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 	data, err := h.us.GetOrderStatus(ctx, orderId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, gorm.ErrRecordNotFound.Error()))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: exceptions.RecordNotFound,
@@ -295,6 +327,7 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		}
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
@@ -304,6 +337,7 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		}
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
+			logger.Info("Response to client", zap.Any("error", err.Error()))
 			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, reqErr.ErrMsg))
 			return c.JSON(http.StatusBadRequest, responser.Response{
 				Message: reqErr.ErrMsg,
@@ -311,6 +345,7 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 				Success: false,
 			})
 		}
+		logger.Info("Response to client", zap.Any("error", err.Error()))
 		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return c.JSON(http.StatusInternalServerError, responser.Response{
 			Data:    "",
@@ -323,6 +358,7 @@ func (h *OrderHandler) RetrieveOrder(c echo.Context) error {
 		Success: true,
 		Data:    data["data"],
 	}
+	logger.Info("Response to client", zap.Any("data", response))
 	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
 
 	return c.JSON(http.StatusOK, response)
