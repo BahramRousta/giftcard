@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/exceptions"
 	"giftcard/pkg/requester"
 	"giftcard/pkg/responser"
 	"giftcard/pkg/utils"
@@ -81,7 +82,7 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
 
 	if res.StatusCode == http.StatusForbidden {
-		return AuthToken{}, &ForbiddenErr{ErrMsg: "Forbidden to access end point."}
+		return AuthToken{}, &ForbiddenErr{ErrMsg: exceptions.StatusForbidden}
 	}
 
 	if res.StatusCode == http.StatusOK {
