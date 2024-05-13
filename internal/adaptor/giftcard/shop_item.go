@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/exceptions"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
@@ -59,9 +60,6 @@ func (g *GiftCard) ShopItem(ctx context.Context, productId string) (ProductRespo
 
 	data, err := g.ProcessRequest(spannedContext, method, url, nil)
 	if err != nil {
-		logger.Error("error while processing request to gift card provider",
-			zap.String("error", err.Error()),
-		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return ProductResponse{}, err
 	}
@@ -72,6 +70,7 @@ func (g *GiftCard) ShopItem(ctx context.Context, productId string) (ProductRespo
 	var responseData ProductResponse
 	err = json.Unmarshal(jsonData, &responseData)
 	if err != nil {
+		logger.Error(exceptions.InternalServerError, zap.String("error", err.Error()))
 		return ProductResponse{}, err
 	}
 	return responseData, nil
