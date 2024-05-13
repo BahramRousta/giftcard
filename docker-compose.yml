@@ -1,8 +1,54 @@
-version: "3.9"
+version: '3'
+
 services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.17
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1024MB"
+
+  logstash:
+    image: logstash:8.12.0
+    volumes:
+      - ./internal/adaptor/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
+      - ./internal/adaptor/logstash/pipeline:/usr/share/logstash/pipeline:ro,Z
+    environment:
+      - "LS_JAVA_OPTS=-Xmx256m -Xms256m"
+    depends_on:
+      - elasticsearch
+    ports:
+#      - "5044:5044"
+      - "50000:50000/tcp"
+      - "50000:50000/udp"
+#      - "9600:9600"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1024MB"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.17
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1024MB"
+
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: jaeger
+    restart: on-failure
     environment:
       - LOG_LEVEL=DEBUG
       - JAEGER_AGENT_HOST=jaeger
@@ -16,71 +62,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: "512MB"
+          cpus: "1"
+          memory: "1024MB"
     depends_on:
       - elasticsearch
-    networks:
-      - my_network
-
-  logstash:
-    hostname: logstash
-    image: logstash:8.12.0
-    container_name: logstash
-    volumes:
-      - ./internal/adaptor/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-    ports:
-#      - "5000:5000"
-      - "5044:5044"
-      - "9600:9600/udp"
-    environment:
-      - "ELASTICSEARCH_HOST=elasticsearch"
-      - "ELASTICSEARCH_PORT=9200"
-      - "LOGSTASH_HOST=localhost"
-      - "LOGSTASH_PORT=5044"
-    depends_on:
-      - elasticsearch
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "512MB"
-    networks:
-      - my_network
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.17
-    container_name: elasticsearch
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      - discovery.type=single-node  # Run Elasticsearch as a single-node cluster
-      - bootstrap.memory_lock=true
-    #      - ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "512MB"
-    networks:
-      - my_network
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.17  # Match Elasticsearch version
-    container_name: kibana
-    ports:
-      - "5601:5601"  # Kibana port
-    depends_on:
-      - elasticsearch  # Wait for Elasticsearch to start
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "512MB"
-    networks:
-      - my_network
-
-networks:
-  my_network:
-    driver: bridge
