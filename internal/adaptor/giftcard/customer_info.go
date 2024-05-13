@@ -71,6 +71,8 @@ func (g *GiftCard) CustomerInfo(ctx context.Context) (CustomerInfoResponse, erro
 		return CustomerInfoResponse{}, err
 	}
 
+	logger.Info("response customer info", zap.String("data", string(jsonData)))
+
 	span.SetAttributes(attribute.String("data", string(jsonData)))
 	return responseData, nil
 }
