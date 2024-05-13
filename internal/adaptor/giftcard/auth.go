@@ -2,13 +2,13 @@ package giftcard
 
 import (
 	"context"
-	"errors"
 	"giftcard/internal/adaptor/trace"
 	"giftcard/internal/exceptions"
 	"giftcard/pkg/requester"
 	"giftcard/pkg/responser"
 	"giftcard/pkg/utils"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"time"
@@ -26,15 +26,18 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 	defer span.End()
 
 	uniqueID, _ := ctx.Value("tracer").(string)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 
 	var authToken AuthToken
 	getTokenErr := g.redis.Get(spannedContext, "giftcard_token", &authToken.Token)
 	if getTokenErr != nil {
-		span.SetAttributes(attribute.String("error while getting token from redis", getTokenErr.Error()))
+		logger.Error("internal error", zap.String("message", getTokenErr.Error()))
+		span.SetAttributes(attribute.String("internal error", getTokenErr.Error()))
 	}
 
 	if authToken.Token != "" {
-		span.SetAttributes(attribute.String("get token from redis", authToken.Token))
 		return authToken, nil
 	}
 
@@ -61,7 +64,8 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 		Header:      req.Header,
 		Params:      req.URL.Query(),
 	}
-	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
+	logger.Error("Request to provider", zap.Any("message", request))
+	span.SetAttributes(attribute.String("Request to provider", utils.Marshal(request)))
 
 	if err != nil {
 		return AuthToken{}, err
@@ -70,8 +74,15 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 
 	bodyBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		span.SetAttributes(attribute.String("error while processing auth response", err.Error()))
-		return AuthToken{}, errors.New("error while processing auth response")
+		logger.Error("internal error", zap.String("error", err.Error()))
+		span.SetAttributes(attribute.String("internal error", err.Error()))
+		return AuthToken{}, &InternalErr{ErrMsg: err.Error()}
+	}
+
+	if res.StatusCode == http.StatusForbidden {
+		logger.Error("Response from provider", zap.String("data", exceptions.StatusForbidden))
+		span.SetAttributes(attribute.String("Response from provider", exceptions.StatusForbidden))
+		return AuthToken{}, &ForbiddenErr{ErrMsg: exceptions.StatusForbidden}
 	}
 
 	response := responser.GiftCardResponse{
@@ -79,26 +90,24 @@ func (g *GiftCard) Auth(ctx context.Context) (AuthToken, error) {
 		Header:     res.Header,
 		Body:       string(bodyBytes),
 	}
+	logger.Info("Response from provider", zap.Any("data", response))
 	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
 
-	if res.StatusCode == http.StatusForbidden {
-		return AuthToken{}, &ForbiddenErr{ErrMsg: exceptions.StatusForbidden}
-	}
-
-	if res.StatusCode == http.StatusOK {
+	switch res.StatusCode {
+	case http.StatusOK:
 		authHeader := res.Header.Get("Authorization")
-
 		setToRedisErr := g.redis.Set(spannedContext, "giftcard_token", authHeader, 3600*time.Second)
 		if setToRedisErr != nil {
-			span.SetAttributes(attribute.String("error while setting token to redis", setToRedisErr.Error()))
+			logger.Error("internal error", zap.String("error", setToRedisErr.Error()))
+			span.SetAttributes(attribute.String("internal error", setToRedisErr.Error()))
 		}
-
 		authToken.Token = authHeader
 		return authToken, nil
+	default:
+		span.SetAttributes(attribute.String("error", exceptions.AuthenticationError),
+			attribute.String("error", string(bodyBytes)),
+		)
+		return AuthToken{}, &AuthErr{ErrMsg: exceptions.AuthenticationError}
 	}
 
-	span.SetAttributes(attribute.String("error", "error while attempting authentication from provider"),
-		attribute.String("error", string(bodyBytes)),
-	)
-	return AuthToken{}, &AuthErr{ErrMsg: "Authentication Failed"}
 }

@@ -2,6 +2,7 @@ package exceptions
 
 const (
 	InternalServerError      = "خطای داخلی رخ داده است"
+	AuthenticationError      = "خطا در احراز هویت"
 	StatusForbidden          = "خطای دسترسی"
 	StatusBadRequest         = "درخواست نامعتبر"
 	RecordNotFound           = "سفارش یافت نشد"

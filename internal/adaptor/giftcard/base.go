@@ -13,6 +13,7 @@ import (
 	"giftcard/pkg/responser"
 	"giftcard/pkg/utils"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	_url "net/url"
@@ -46,17 +47,22 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 	defer span.End()
 
 	uniqueID, _ := ctx.Value("tracer").(string)
+	logger := zap.L().With(
+		zap.String("tracer", uniqueID),
+	)
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
-		span.SetAttributes(attribute.String("error while creating new request", err.Error()))
+		logger.Error(exceptions.InternalServerError, zap.String("error", err.Error()))
+		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 		return nil, err
 	}
 
 	token, err := g.Auth(spannedContext)
 	if err != nil {
-		span.SetAttributes(attribute.String("error while authentication to gift card provide", err.Error()))
+		logger.Error(exceptions.AuthenticationError, zap.Any("error", err.Error()))
+		span.SetAttributes(attribute.String(exceptions.AuthenticationError, err.Error()))
 		return nil, err
 	}
 
@@ -77,7 +83,9 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		Header:      req.Header,
 		Params:      req.URL.Query(),
 	}
-	span.SetAttributes(attribute.String("Request", utils.Marshal(request)))
+
+	logger.Info("Request to provider", zap.Any("data", request))
+	span.SetAttributes(attribute.String("Request to provider", utils.Marshal(request)))
 
 	var res *http.Response
 	var bodyBytes []byte
@@ -87,39 +95,45 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		if err != nil {
 			var urlErr *_url.Error
 			if errors.As(err, &urlErr) {
-				span.SetAttributes(attribute.String("URL error encountered", urlErr.Error()))
+				logger.Error(exceptions.InternalServerError, zap.String("error", urlErr.Error()))
+				span.SetAttributes(attribute.String(exceptions.InternalServerError, urlErr.Error()))
 				time.Sleep(1 * time.Second)
 				continue
 			}
 
 			if isEOFError(err) {
-				span.SetAttributes(attribute.String("EOF error encountered", urlErr.Error()))
+				logger.Error(exceptions.InternalServerError, zap.String("error", err.Error()))
+				span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 				time.Sleep(1 * time.Second)
 				continue
 			}
-
-			span.SetAttributes(attribute.String("error while sending request to gift card provider", err.Error()))
+			logger.Error(exceptions.InternalServerError, zap.String("error", err.Error()))
+			span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 			return nil, err
 		}
 		defer res.Body.Close()
 
 		bodyBytes, err = io.ReadAll(res.Body)
 		if err != nil {
-			span.SetAttributes(attribute.String("error while reading response body", err.Error()))
+			logger.Error(exceptions.InternalServerError, zap.String("error", err.Error()))
+			span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
 			return nil, err
 		}
 		break
 	}
 
 	if res.StatusCode == http.StatusForbidden {
+		logger.Error("Response from provider", zap.String("data", exceptions.StatusForbidden))
+		span.SetAttributes(attribute.String("Response from provider", exceptions.StatusForbidden))
 		return nil, &ForbiddenErr{ErrMsg: exceptions.StatusForbidden}
 	}
 
 	var responseData map[string]any
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		span.SetAttributes(attribute.String("error while unmarshal response data", err.Error()))
-		return nil, errors.New("error while unmarshal response body")
+		logger.Error(exceptions.InternalServerError, zap.String("error", err.Error()))
+		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
+		return nil, &InternalErr{ErrMsg: exceptions.InternalServerError}
 	}
 
 	response := responser.GiftCardResponse{
@@ -127,7 +141,8 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		Header:     res.Header,
 		Body:       string(bodyBytes),
 	}
-	span.SetAttributes(attribute.String("Response", utils.Marshal(response)))
+	logger.Info("Response from provider", zap.Any("data", response))
+	span.SetAttributes(attribute.String("Response from provider", utils.Marshal(response)))
 
 	switch res.StatusCode {
 	case http.StatusOK:
