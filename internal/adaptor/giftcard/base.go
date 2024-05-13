@@ -8,6 +8,7 @@ import (
 	"giftcard/config"
 	"giftcard/internal/adaptor/redis"
 	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/exceptions"
 	"giftcard/pkg/requester"
 	"giftcard/pkg/responser"
 	"giftcard/pkg/utils"
@@ -110,10 +111,14 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 		break
 	}
 
+	if res.StatusCode == http.StatusForbidden {
+		return nil, &ForbiddenErr{ErrMsg: exceptions.StatusForbidden}
+	}
+
 	var responseData map[string]any
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		span.SetAttributes(attribute.String("error", err.Error()))
+		span.SetAttributes(attribute.String("error while unmarshal response data", err.Error()))
 		return nil, errors.New("error while unmarshal response body")
 	}
 
@@ -127,8 +132,6 @@ func (g *GiftCard) ProcessRequest(ctx context.Context, method string, url string
 	switch res.StatusCode {
 	case http.StatusOK:
 		return responseData, nil
-	case http.StatusForbidden:
-		return responseData, &ForbiddenErr{ErrMsg: "Forbidden to access end point."}
 	default:
 		return responseData, &RequestErr{ErrMsg: "error from provider", Response: responseData}
 	}
