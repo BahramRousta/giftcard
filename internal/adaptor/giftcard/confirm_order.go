@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/exceptions"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
@@ -30,15 +31,14 @@ func (g *GiftCard) ConfirmOrder(ctx context.Context, orderId string) (map[string
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
+		logger.Error(exceptions.InternalServerError,
+			zap.String("error", err.Error()),
+		)
 		return nil, err
 	}
 
 	data, err := g.ProcessRequest(spannedContext, method, url, &payloadBytes)
-
 	if err != nil {
-		logger.Error("error while processing request to gift card provider",
-			zap.String("error", err.Error()),
-		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return nil, err
 	}

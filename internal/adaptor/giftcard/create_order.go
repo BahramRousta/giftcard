@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/exceptions"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
@@ -91,7 +92,7 @@ func (g *GiftCard) CreateOrder(ctx context.Context, productList []map[string]any
 
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		logger.Error("error while prepare request to gift card provider",
+		logger.Error(exceptions.InternalServerError,
 			zap.String("error", err.Error()),
 		)
 		span.SetAttributes(attribute.String("error", err.Error()))
@@ -100,9 +101,6 @@ func (g *GiftCard) CreateOrder(ctx context.Context, productList []map[string]any
 
 	data, err := g.ProcessRequest(spannedContext, method, url, &payloadBytes)
 	if err != nil {
-		logger.Error("error while processing request to gift card provider",
-			zap.String("error", err.Error()),
-		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return OrderResponse{}, err
 	}
@@ -112,7 +110,7 @@ func (g *GiftCard) CreateOrder(ctx context.Context, productList []map[string]any
 	var responseData OrderResponse
 	err = json.Unmarshal(jsonData, &responseData)
 	if err != nil {
-		logger.Error("error while unmarshal gift card provider response data",
+		logger.Error(exceptions.InternalServerError,
 			zap.String("error", err.Error()),
 		)
 		span.SetAttributes(attribute.String("error", err.Error()))

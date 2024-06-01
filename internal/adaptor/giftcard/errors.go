@@ -24,3 +24,11 @@ type RequestErr struct {
 func (e *RequestErr) Error() string {
 	return e.ErrMsg
 }
+
+type InternalErr struct {
+	ErrMsg string
+}
+
+func (e *InternalErr) Error() string {
+	return e.ErrMsg
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"giftcard/internal/adaptor/giftcard"
 	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/exceptions"
 	"giftcard/internal/modules/customer/repository"
 	"giftcard/model"
 	"go.opentelemetry.io/otel/attribute"
@@ -48,9 +49,6 @@ func (us CustomerUseCase) GetCustomerInfoUseCase(ctx context.Context) (giftcard.
 
 	data, err := us.gf.CustomerInfo(spannedContext)
 	if err != nil {
-		logger.Error("error while processing gift card customer info",
-			zap.String("error", err.Error()),
-		)
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return giftcard.CustomerInfoResponse{}, err
 	}
@@ -64,14 +62,12 @@ func (us CustomerUseCase) GetCustomerInfoUseCase(ctx context.Context) (giftcard.
 	}
 
 	if err := us.walletRepo.InsertWallet(wallet); err != nil {
-		logger.Error("error while inserting gift card customer info to db",
-			zap.String("error", err.Error()),
-		)
+		logger.Error(exceptions.DBError, zap.String("error", err.Error()))
 		span.SetAttributes(attribute.String("error", err.Error()))
 		return giftcard.CustomerInfoResponse{}, err
 	}
 
 	jsonData, err := json.Marshal(data.Data)
-	span.SetAttributes(attribute.String("data from customer info use case layer", string(jsonData)))
+	span.SetAttributes(attribute.String("data", string(jsonData)))
 	return data, nil
 }

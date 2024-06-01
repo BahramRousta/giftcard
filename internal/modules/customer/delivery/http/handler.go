@@ -3,11 +3,12 @@ package delivery
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	gftErr "giftcard/internal/adaptor/giftcard"
 	"giftcard/internal/adaptor/trace"
+	"giftcard/internal/exceptions"
 	"giftcard/internal/modules/customer/usecase"
+	"giftcard/pkg/requester"
 	"giftcard/pkg/responser"
 	"giftcard/pkg/utils"
 	"github.com/labstack/echo/v4"
@@ -52,18 +53,22 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	}
 
 	uniqueID := c.Response().Header().Get(echo.HeaderXRequestID)
-
 	logger := zap.L().With(
 		zap.String("tracer", uniqueID),
 	)
-	logger.Info("customer info request",
-		zap.String("request_body", requestBody),
-		zap.String("user_ip", c.RealIP()),
-		zap.String("uri", c.Path()),
-		zap.String("method", c.Request().Method),
-		zap.String("host", c.Request().Host),
-		zap.Any("header", c.Request().Header),
-	)
+
+	request := requester.Request{
+		ID:          uniqueID,
+		RequestBody: requestBody,
+		UserIP:      c.RealIP(),
+		Uri:         c.Path(),
+		Method:      c.Request().Method,
+		Host:        c.Request().Host,
+		Header:      c.Request().Header,
+		Params:      c.QueryParams(),
+	}
+	logger.Info("Request from client", zap.Any("data", request))
+	span.SetAttributes(attribute.String("Request from client", utils.Marshal(request)))
 
 	ctx := context.WithValue(spannedContext, "tracer", uniqueID)
 	data, err := h.customerUseCase.GetCustomerInfoUseCase(ctx)
@@ -71,10 +76,8 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 	if err != nil {
 		var forbiddenErr *gftErr.ForbiddenErr
 		if errors.As(err, &forbiddenErr) {
-			logger.Info("response to client",
-				zap.Any("data", forbiddenErr.ErrMsg),
-			)
-			span.SetAttributes(attribute.String("err", forbiddenErr.ErrMsg))
+			logger.Info("Response to client", zap.Any("error", forbiddenErr.ErrMsg))
+			span.SetAttributes(attribute.String(exceptions.StatusForbidden, forbiddenErr.ErrMsg))
 			return c.JSON(http.StatusForbidden, responser.Response{
 				Message: forbiddenErr.ErrMsg,
 				Data:    "",
@@ -84,30 +87,28 @@ func (h CustomerInfoHandler) CustomerInfo(c echo.Context) error {
 
 		var reqErr *gftErr.RequestErr
 		if errors.As(err, &reqErr) {
-			logger.Info("response to client",
-				zap.Any("error", reqErr.ErrMsg),
-				zap.Any("data", reqErr.Response),
-			)
-			span.SetAttributes(attribute.String("err", reqErr.ErrMsg))
-			return c.JSON(http.StatusBadRequest, map[string]any{
-				"message": reqErr.ErrMsg,
-				"data":    reqErr.Response,
-				"success": false,
+			logger.Info("Response to client", zap.Any("error", reqErr.Error))
+			span.SetAttributes(attribute.String(exceptions.StatusBadRequest, reqErr.ErrMsg))
+			return c.JSON(http.StatusBadRequest, responser.Response{
+				Message: reqErr.ErrMsg,
+				Data:    reqErr.Response,
+				Success: false,
 			})
 		}
-		logger.Error("response to client",
-			zap.Any("error", "internal error"),
-		)
-		span.SetAttributes(attribute.String("err", err.Error()))
-		return c.JSON(http.StatusInternalServerError, responser.Response{Message: "Something went wrong", Data: "", Success: false})
+		logger.Info("Response to client", zap.Any("error", err.Error()))
+		span.SetAttributes(attribute.String(exceptions.InternalServerError, err.Error()))
+		return c.JSON(http.StatusInternalServerError, responser.Response{
+			Message: exceptions.InternalServerError,
+			Data:    "",
+			Success: false})
 	}
 
-	//logger.Info("customer info response", zap.Any("data", data.Data))
-
-	dataJSON, err := json.Marshal(data.Data)
-	span.SetAttributes(
-		attribute.String("message", "get customer info successfully passed."),
-		attribute.String("data", string(dataJSON)),
-	)
-	return c.JSON(http.StatusOK, responser.Response{Message: "", Success: true, Data: data.Data})
+	response := responser.Response{
+		Message: "",
+		Success: true,
+		Data:    data.Data,
+	}
+	logger.Info("Response to client", zap.Any("data", response))
+	span.SetAttributes(attribute.String("Request to client", utils.Marshal(response)))
+	return c.JSON(http.StatusOK, response)
 }

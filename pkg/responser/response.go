@@ -5,3 +5,9 @@ type Response struct {
 	Success bool   `json:"success"`
 	Data    any    `json:"data"`
 }
+
+type GiftCardResponse struct {
+	StatusCode int
+	Header     any
+	Body       string
+}
