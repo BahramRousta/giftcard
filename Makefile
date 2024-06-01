@@ -16,7 +16,7 @@ postgres:
 		-e POSTGRES_SSL_MODE=disable \
 		-e TZ=Asia/Tehran \
 		-p 5433:5432 \
-		postgres:15.5-alpine3.19
+		postgres:16.3-alpine3.20
 
 redis:
 	docker run -d --name redis -p 6379:6379 redis:latest

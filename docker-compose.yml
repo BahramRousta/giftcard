@@ -14,7 +14,7 @@ services:
           memory: "1024MB"
 
   logstash:
-    image: logstash:8.12.0
+    image: docker.elastic.co/logstash/logstash:7.17.17
     volumes:
       - ./internal/adaptor/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
       - ./internal/adaptor/logstash/pipeline:/usr/share/logstash/pipeline:ro,Z
