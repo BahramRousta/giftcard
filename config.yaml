@@ -1,0 +1,27 @@
+service:
+  name: "gift card"
+  base_url: "https://sandbox-api.core.hub.gift"
+  client_id: "YjJkYTNkNzhlZmYwZjZhN2I5ZGI0ZDJlYzE4NjBmNGY="
+  client_secret: "b66edf9b5c3a2e149e0e0bdd9c780ea1d4cfd4c8326c53f507ad11e412299327"
+
+redis:
+  db: 0
+  host: "localhost"
+  port: "6379"
+
+postgres:
+  username: "root"
+  password: "password"
+  host: "localhost"
+  port: "5433"
+  schema: "gift_card_db"
+  ssl_mode: "disable"
+  timezone: "Asia/Tehran"
+
+tracer:
+  hostPort: "localhost:4318"
+  logSpans: true
+
+logstash:
+  endpoint: "localhost:9600"
+  timeout: 5
